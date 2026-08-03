@@ -16,16 +16,16 @@ export default function Vitrine() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm py-6 px-6 mb-8">
-        <h1 className="text-2xl font-bold text-gray-800">
-          Encontre o espaço ideal para o seu evento
-        </h1>
-        <p className="text-gray-500 mt-1">
-          Chácaras, salões e quiosques com reserva simplificada.
-        </p>
-      </header>
-
-      <main className="max-w-6xl mx-auto px-6 pb-12">
+      <main className="max-w-6xl mx-auto px-6 py-8">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-800">
+            Encontre o espaço ideal para o seu evento
+          </h1>
+          <p className="text-gray-500 mt-1">
+            Chácaras, salões e quiosques com reserva simplificada.
+          </p>
+        </div>
+        
         {carregando && (
           <p className="text-center text-gray-400">Carregando espaços...</p>
         )}
