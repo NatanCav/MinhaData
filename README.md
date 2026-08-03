@@ -12,7 +12,7 @@
 ## 🚀 Tecnologias Utilizadas (Stack)
 
 ### Front-end
-* **React** ou **Vue.js** (Interface de Usuário dinâmica)
+* **React** (Interface de Usuário dinâmica)
 * **CSS Nativo (Flexbox)** / **Tailwind CSS** (Estilização responsiva)
 
 ### Back-end
