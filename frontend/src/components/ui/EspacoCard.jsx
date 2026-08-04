@@ -1,11 +1,11 @@
 export default function EspacoCard({ espaco }) {
-  const { nome, tipo, precoPorHora, capacidade, imagemUrl, disponivel } = espaco;
+  const { nome, tipo, preco, unidadePreco, capacidade, imagemCapa, disponivel } = espaco;
 
   return (
     <div className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col hover:shadow-xl transition-shadow duration-300">
       <div className="relative">
         <img
-          src={imagemUrl}
+          src={imagemCapa}
           alt={nome}
           className="w-full h-48 object-cover"
         />
@@ -32,8 +32,8 @@ export default function EspacoCard({ espaco }) {
 
         <div className="mt-auto flex items-center justify-between pt-3">
           <p className="text-gray-800 font-semibold">
-            R$ {precoPorHora.toFixed(2)}
-            <span className="text-sm font-normal text-gray-400"> /hora</span>
+            R$ {preco.toFixed(2)}
+            <span className="text-sm font-normal text-gray-400"> /{unidadePreco}</span>
           </p>
 
           <button
