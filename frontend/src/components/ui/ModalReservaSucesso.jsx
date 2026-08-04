@@ -63,7 +63,7 @@ export default function ModalReservaSucesso({ espaco, data, horario, onFechar })
             type="button"
             onClick={fechar}
             aria-label="Fechar"
-            className="text-gray-400 transition-colors hover:text-gray-600"
+            className="rounded text-gray-400 transition-colors hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
           >
             <IconeFechar className="h-5 w-5" />
           </button>

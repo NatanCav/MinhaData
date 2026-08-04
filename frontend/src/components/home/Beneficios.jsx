@@ -4,6 +4,8 @@ import {
   IconePainel,
   IconeWhatsapp,
 } from "../ui/Icones";
+import SectionTitle from "../ui/SectionTitle";
+import Card from "../ui/Card";
 
 const BENEFICIOS = [
   {
@@ -40,25 +42,24 @@ export default function Beneficios() {
   return (
     <section id="como-funciona" className="bg-gray-50">
       <div className="mx-auto max-w-6xl px-6 py-12">
-        <div className="mb-8 text-center">
-          <h2 className="text-2xl font-bold text-gray-900">Como funciona</h2>
-          <p className="text-sm text-gray-500 md:text-base">
-            Menos mensagens perdidas, mais reservas confirmadas.
-          </p>
-        </div>
+        <SectionTitle
+          nivel="destaque"
+          centralizado
+          subtitulo="Menos mensagens perdidas, mais reservas confirmadas."
+          className="mb-8"
+        >
+          Como funciona
+        </SectionTitle>
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {BENEFICIOS.map(({ id, icone: Icone, titulo, descricao }) => (
-            <div
-              key={id}
-              className="flex flex-col items-start gap-3 rounded-2xl bg-white p-4 shadow-md"
-            >
+            <Card key={id} className="flex flex-col items-start gap-3">
               <span className="rounded-lg bg-emerald-100 p-2 text-emerald-700">
                 <Icone className="h-6 w-6" />
               </span>
               <h3 className="text-lg font-bold text-gray-800">{titulo}</h3>
               <p className="text-sm text-gray-500">{descricao}</p>
-            </div>
+            </Card>
           ))}
         </div>
       </div>

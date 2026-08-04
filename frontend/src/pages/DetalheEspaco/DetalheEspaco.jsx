@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { getEspacoPorSlug } from "../../services/espacosService";
 import CardReserva from "../../components/ui/CardReserva";
 import Container from "../../components/ui/Container";
 import SectionTitle from "../../components/ui/SectionTitle";
+import Card from "../../components/ui/Card";
+import Skeleton from "../../components/ui/Skeleton";
+import EmptyState from "../../components/ui/EmptyState";
 import { IconeCheck, IconeEstrela } from "../../components/ui/Icones";
 
 function FadeIn({ children, className = "" }) {
@@ -27,42 +30,42 @@ function FadeIn({ children, className = "" }) {
 
 function EsqueletoDetalhe() {
   return (
-    <div className="flex animate-pulse flex-col gap-8 lg:flex-row">
+    <div className="flex flex-col gap-8 lg:flex-row">
       <div className="flex flex-1 flex-col gap-6">
         <div className="flex flex-col gap-2">
-          <div className="h-64 w-full rounded-2xl bg-gray-200 md:h-96" />
+          <Skeleton className="h-64 w-full rounded-2xl md:h-96" />
           <div className="grid grid-cols-4 gap-2">
             {["a", "b", "c", "d"].map((chave) => (
-              <div key={chave} className="h-16 rounded-lg bg-gray-200 md:h-20" />
+              <Skeleton key={chave} className="h-16 rounded-lg md:h-20" />
             ))}
           </div>
         </div>
 
         <div className="flex flex-col gap-3">
-          <div className="h-3 w-20 rounded bg-gray-200" />
-          <div className="h-7 w-2/3 rounded bg-gray-200" />
-          <div className="h-4 w-1/3 rounded bg-gray-200" />
-          <div className="h-4 w-full rounded bg-gray-200" />
-          <div className="h-4 w-5/6 rounded bg-gray-200" />
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-7 w-2/3" />
+          <Skeleton className="h-4 w-1/3" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
         </div>
 
         <div className="flex flex-col gap-3 border-t border-gray-100 pt-6">
-          <div className="h-5 w-32 rounded bg-gray-200" />
+          <Skeleton className="h-5 w-32" />
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {["a", "b", "c", "d"].map((chave) => (
-              <div key={chave} className="h-4 w-full rounded bg-gray-200" />
+              <Skeleton key={chave} className="h-4 w-full" />
             ))}
           </div>
         </div>
       </div>
 
       <div className="w-full lg:w-80">
-        <div className="flex flex-col gap-4 rounded-2xl bg-white p-4 shadow-md">
-          <div className="h-6 w-24 rounded bg-gray-200" />
-          <div className="h-10 w-full rounded-lg bg-gray-200" />
-          <div className="h-10 w-full rounded-lg bg-gray-200" />
-          <div className="h-10 w-full rounded-lg bg-gray-200" />
-        </div>
+        <Card className="flex flex-col gap-4">
+          <Skeleton className="h-6 w-24" />
+          <Skeleton className="h-10 w-full rounded-lg" />
+          <Skeleton className="h-10 w-full rounded-lg" />
+          <Skeleton className="h-10 w-full rounded-lg" />
+        </Card>
       </div>
     </div>
   );
@@ -91,27 +94,20 @@ export default function DetalheEspaco() {
         {carregando && <EsqueletoDetalhe />}
 
         {!carregando && erro && (
-          <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <p className="text-red-500">{erro}</p>
-            <Link
-              to="/espacos"
-              className="text-sm font-medium text-emerald-700 transition-colors hover:text-emerald-800"
-            >
-              Voltar para os espaços
-            </Link>
-          </div>
+          <EmptyState
+            mensagem={erro}
+            tom="erro"
+            linkTo="/espacos"
+            linkLabel="Voltar para os espaços"
+          />
         )}
 
         {!carregando && !erro && !espaco && (
-          <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <p className="text-gray-400">Este espaço não está mais disponível.</p>
-            <Link
-              to="/espacos"
-              className="text-sm font-medium text-emerald-700 transition-colors hover:text-emerald-800"
-            >
-              Voltar para os espaços
-            </Link>
-          </div>
+          <EmptyState
+            mensagem="Este espaço não está mais disponível."
+            linkTo="/espacos"
+            linkLabel="Voltar para os espaços"
+          />
         )}
 
         {!carregando && !erro && espaco && (
@@ -136,7 +132,8 @@ export default function DetalheEspaco() {
                           type="button"
                           onClick={() => setImagemAtiva(indice)}
                           aria-label={`Ver foto ${indice + 1} de ${espaco.nome}`}
-                          className={`relative h-16 overflow-hidden rounded-lg border-2 transition-colors md:h-20 ${
+                          aria-pressed={imagemAtiva === indice}
+                          className={`relative h-16 overflow-hidden rounded-lg border-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 md:h-20 ${
                             imagemAtiva === indice
                               ? "border-emerald-600"
                               : "border-transparent"

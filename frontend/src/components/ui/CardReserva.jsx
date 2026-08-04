@@ -4,6 +4,8 @@ import { IconeRelogio } from "./Icones";
 import Calendario from "./Calendario";
 import Button from "./Button";
 import Badge from "./Badge";
+import Card from "./Card";
+import Skeleton from "./Skeleton";
 import { getDisponibilidade } from "../../services/disponibilidadeService";
 import { useReserva } from "../../context/useReserva";
 
@@ -101,7 +103,7 @@ export default function CardReserva({ espaco }) {
   }
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl bg-white p-4 shadow-md">
+    <Card className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <p className="text-lg font-semibold text-gray-800">
             R$ {preco.toFixed(2)}
@@ -116,9 +118,7 @@ export default function CardReserva({ espaco }) {
           <span className="text-sm font-medium text-gray-700">Escolha a data</span>
 
           {carregandoDisponibilidade && (
-            <div className="flex h-56 animate-pulse items-center justify-center rounded-lg border border-gray-200 text-xs text-gray-400">
-              Carregando agenda...
-            </div>
+            <Skeleton className="h-56 w-full rounded-lg" />
           )}
 
           {!carregandoDisponibilidade && erroDisponibilidade && (
@@ -150,11 +150,12 @@ export default function CardReserva({ espaco }) {
                     key={horario}
                     type="button"
                     disabled={!disponivel || !data || indisponivel}
+                    aria-pressed={horarioSelecionado === horario}
                     onClick={() => {
                       setHorarioSelecionado(horario);
                       setErros((atual) => ({ ...atual, horario: null }));
                     }}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                    className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
                       indisponivel ? "line-through" : ""
                     } ${
                       horarioSelecionado === horario
@@ -215,6 +216,6 @@ export default function CardReserva({ espaco }) {
       >
         {disponivel ? "Ver disponibilidade" : "Indisponível"}
       </Button>
-    </div>
+    </Card>
   );
 }

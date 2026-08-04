@@ -1,8 +1,29 @@
 import { useEffect, useState } from "react";
 import { getEspacos } from "../../services/espacosService";
 import EspacoCard from "../ui/EspacoCard";
+import SectionTitle from "../ui/SectionTitle";
+import Skeleton from "../ui/Skeleton";
+import EmptyState from "../ui/EmptyState";
+import Card from "../ui/Card";
 
 const QUANTIDADE_DESTAQUE = 3;
+
+function EsqueletoCard() {
+  return (
+    <Card padding="" className="flex flex-col overflow-hidden">
+      <Skeleton className="h-48 w-full rounded-none" />
+      <div className="flex flex-col gap-2 p-4">
+        <Skeleton className="h-3 w-16" />
+        <Skeleton className="h-5 w-2/3" />
+        <Skeleton className="h-4 w-1/3" />
+        <div className="mt-2 flex items-center justify-between">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-9 w-24 rounded-lg" />
+        </div>
+      </div>
+    </Card>
+  );
+}
 
 export default function VitrineEspacos() {
   const [espacos, setEspacos] = useState([]);
@@ -19,27 +40,27 @@ export default function VitrineEspacos() {
   return (
     <section id="espacos" className="bg-white">
       <div className="mx-auto max-w-6xl px-6 py-8">
-        <div className="mb-8 text-center">
-          <h2 className="text-2xl font-bold text-gray-900">
-            Espaços em destaque
-          </h2>
-          <p className="text-sm text-gray-500 md:text-base">
-            Uma amostra dos espaços disponíveis para reservar agora.
-          </p>
-        </div>
+        <SectionTitle
+          nivel="destaque"
+          centralizado
+          subtitulo="Uma amostra dos espaços disponíveis para reservar agora."
+          className="mb-8"
+        >
+          Espaços em destaque
+        </SectionTitle>
 
         {carregando && (
-          <p className="text-center text-gray-400">Carregando espaços...</p>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: QUANTIDADE_DESTAQUE }, (_, indice) => (
+              <EsqueletoCard key={indice} />
+            ))}
+          </div>
         )}
 
-        {!carregando && erro && (
-          <p className="text-center text-red-500">{erro}</p>
-        )}
+        {!carregando && erro && <EmptyState mensagem={erro} tom="erro" />}
 
         {!carregando && !erro && espacos.length === 0 && (
-          <p className="text-center text-gray-400">
-            Nenhum espaço disponível no momento.
-          </p>
+          <EmptyState mensagem="Nenhum espaço disponível no momento." />
         )}
 
         {!carregando && !erro && espacos.length > 0 && (

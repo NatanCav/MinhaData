@@ -1,6 +1,30 @@
 import { useEffect, useState } from "react";
 import { getEspacos } from "../../services/espacosService";
 import EspacoCard from "../../components/ui/EspacoCard";
+import Container from "../../components/ui/Container";
+import SectionTitle from "../../components/ui/SectionTitle";
+import Skeleton from "../../components/ui/Skeleton";
+import EmptyState from "../../components/ui/EmptyState";
+import Card from "../../components/ui/Card";
+
+const QUANTIDADE_ESQUELETOS = 6;
+
+function EsqueletoCard() {
+  return (
+    <Card padding="" className="flex flex-col overflow-hidden">
+      <Skeleton className="h-48 w-full rounded-none" />
+      <div className="flex flex-col gap-2 p-4">
+        <Skeleton className="h-3 w-16" />
+        <Skeleton className="h-5 w-2/3" />
+        <Skeleton className="h-4 w-1/3" />
+        <div className="mt-2 flex items-center justify-between">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-9 w-24 rounded-lg" />
+        </div>
+      </div>
+    </Card>
+  );
+}
 
 export default function Vitrine() {
   const [espacos, setEspacos] = useState([]);
@@ -16,30 +40,39 @@ export default function Vitrine() {
 
   return (
     <div className="bg-gray-50">
-      <main className="max-w-6xl mx-auto px-6 py-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-800">
-            Encontre o espaço ideal para o seu evento
-          </h1>
-          <p className="text-gray-500 mt-1">
-            Chácaras, salões e quiosques com reserva simplificada.
-          </p>
-        </div>
-        
+      <Container as="main" className="py-8">
+        <SectionTitle
+          nivel="pagina"
+          subtitulo="Chácaras, salões e quiosques com reserva simplificada."
+          className="mb-8"
+        >
+          Encontre o espaço ideal para o seu evento
+        </SectionTitle>
+
         {carregando && (
-          <p className="text-center text-gray-400">Carregando espaços...</p>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: QUANTIDADE_ESQUELETOS }, (_, indice) => (
+              <EsqueletoCard key={indice} />
+            ))}
+          </div>
         )}
 
-        {erro && <p className="text-center text-red-500">{erro}</p>}
+        {!carregando && erro && (
+          <EmptyState mensagem={erro} tom="erro" />
+        )}
 
-        {!carregando && !erro && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {!carregando && !erro && espacos.length === 0 && (
+          <EmptyState mensagem="Nenhum espaço disponível no momento." />
+        )}
+
+        {!carregando && !erro && espacos.length > 0 && (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {espacos.map((espaco) => (
               <EspacoCard key={espaco.id} espaco={espaco} />
             ))}
           </div>
         )}
-      </main>
+      </Container>
     </div>
   );
 }

@@ -63,7 +63,7 @@ export default function Calendario({
           onClick={() => mudarMes(-1)}
           disabled={desabilitado || mesAnteriorDesabilitado}
           aria-label="Mês anterior"
-          className="rounded-lg p-1 text-gray-500 transition-colors hover:bg-emerald-100 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+          className="rounded-lg p-1 text-gray-500 transition-colors hover:bg-emerald-100 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
         >
           <IconeSetaEsquerda className="h-4 w-4" />
         </button>
@@ -75,7 +75,7 @@ export default function Calendario({
           onClick={() => mudarMes(1)}
           disabled={desabilitado}
           aria-label="Próximo mês"
-          className="rounded-lg p-1 text-gray-500 transition-colors hover:bg-emerald-100 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+          className="rounded-lg p-1 text-gray-500 transition-colors hover:bg-emerald-100 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
         >
           <IconeSetaDireita className="h-4 w-4" />
         </button>
@@ -105,7 +105,7 @@ export default function Calendario({
               onClick={() => onSelecionarData(iso)}
               aria-label={`Selecionar ${dia} de ${NOMES_MES[mesExibido.mes]}`}
               aria-pressed={selecionado}
-              className={`aspect-square rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed ${
+              className={`aspect-square rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed ${
                 selecionado
                   ? "bg-emerald-700 text-white"
                   : inativo

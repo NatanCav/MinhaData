@@ -1,13 +1,18 @@
 import { Link } from "react-router-dom";
+import Card from "./Card";
+import Badge from "./Badge";
 
 export default function EspacoCard({ espaco }) {
   const { slug, nome, tipo, preco, unidadePreco, capacidade, imagemCapa, disponivel } =
     espaco;
 
   return (
-    <Link
+    <Card
+      as={Link}
       to={`/espacos/${slug}`}
-      className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col hover:shadow-xl transition-shadow duration-300"
+      padding=""
+      hover
+      className="flex flex-col overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
     >
       <div className="relative">
         <img
@@ -15,15 +20,12 @@ export default function EspacoCard({ espaco }) {
           alt={nome}
           className="w-full h-48 object-cover"
         />
-        <span
-          className={`absolute top-3 right-3 text-xs font-semibold px-3 py-1 rounded-full ${
-            disponivel
-              ? "bg-emerald-100 text-emerald-700"
-              : "bg-red-100 text-red-700"
-          }`}
+        <Badge
+          tom={disponivel ? "emerald" : "red"}
+          className="absolute top-3 right-3"
         >
           {disponivel ? "Disponível" : "Indisponível"}
-        </span>
+        </Badge>
       </div>
 
       <div className="p-4 flex flex-col gap-2 flex-1">
@@ -53,6 +55,6 @@ export default function EspacoCard({ espaco }) {
           </span>
         </div>
       </div>
-    </Link>
+    </Card>
   );
 }

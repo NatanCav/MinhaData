@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useReserva } from "../../context/useReserva";
 import Container from "../../components/ui/Container";
 import SectionTitle from "../../components/ui/SectionTitle";
 import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
+import EmptyState from "../../components/ui/EmptyState";
 import ModalReservaSucesso from "../../components/ui/ModalReservaSucesso";
 import { IconeCalendario, IconeRelogio } from "../../components/ui/Icones";
 
@@ -32,16 +34,12 @@ export default function ConfirmarReserva() {
 
   if (!reserva) {
     return (
-      <Container as="main" className="flex flex-col items-center gap-3 py-16 text-center">
-        <p className="text-gray-400">
-          Nenhuma reserva em andamento. Escolha um espaço para continuar.
-        </p>
-        <Link
-          to="/espacos"
-          className="text-sm font-medium text-emerald-700 transition-colors hover:text-emerald-800"
-        >
-          Ver espaços
-        </Link>
+      <Container as="main">
+        <EmptyState
+          mensagem="Nenhuma reserva em andamento. Escolha um espaço para continuar."
+          linkTo="/espacos"
+          linkLabel="Ver espaços"
+        />
       </Container>
     );
   }
@@ -91,7 +89,7 @@ export default function ConfirmarReserva() {
             Confirmar reserva
           </SectionTitle>
 
-          <div className="flex flex-col gap-4 rounded-2xl bg-white p-4 shadow-md">
+          <Card className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
               <label htmlFor="nome" className="text-sm font-medium text-gray-700">
                 Nome
@@ -155,7 +153,7 @@ export default function ConfirmarReserva() {
                 className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600"
               />
             </div>
-          </div>
+          </Card>
 
           <Button type="submit" className="w-full lg:w-auto">
             Confirmar Reserva
@@ -163,7 +161,7 @@ export default function ConfirmarReserva() {
         </form>
 
         <aside className="w-full lg:w-80">
-          <div className="flex flex-col gap-4 rounded-2xl bg-white p-4 shadow-md lg:sticky lg:top-24">
+          <Card className="flex flex-col gap-4 lg:sticky lg:top-24">
             <SectionTitle>Resumo da reserva</SectionTitle>
 
             <p className="text-sm font-semibold text-gray-800">{espaco.nome}</p>
@@ -188,7 +186,7 @@ export default function ConfirmarReserva() {
                 </span>
               </p>
             </div>
-          </div>
+          </Card>
         </aside>
       </Container>
 

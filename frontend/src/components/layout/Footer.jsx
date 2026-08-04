@@ -15,7 +15,10 @@ export default function Footer() {
   return (
     <footer className="border-t border-gray-100 bg-white">
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8 md:flex-row md:items-center md:justify-between">
-        <Link to="/" className="flex items-center gap-2">
+        <Link
+          to="/"
+          className="flex items-center gap-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+        >
           <IconeCalendario className="h-5 w-5 text-emerald-600" />
           <span className="text-base font-bold text-gray-900">MinhaData</span>
         </Link>
@@ -25,7 +28,7 @@ export default function Footer() {
             <Link
               key={link.label}
               to={link.to}
-              className="text-sm font-medium text-gray-600 transition-colors hover:text-emerald-600"
+              className="rounded text-sm font-medium text-gray-600 transition-colors hover:text-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
             >
               {link.label}
             </Link>
