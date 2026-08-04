@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { IconeRelogio } from "./Icones";
-import ModalReservaSucesso from "./ModalReservaSucesso";
 import Calendario from "./Calendario";
 import Button from "./Button";
 import Badge from "./Badge";
 import { getDisponibilidade } from "../../services/disponibilidadeService";
+import { useReserva } from "../../context/useReserva";
 
 const HORARIOS_DISPONIVEIS = [
   "08:00",
@@ -22,13 +23,15 @@ export default function CardReserva({ espaco }) {
   const { preco, unidadePreco, disponivel, slug } = espaco;
   const porHora = unidadePreco === "hora";
 
+  const navigate = useNavigate();
+  const { iniciarReserva } = useReserva();
+
   const [data, setData] = useState("");
   const [horarioInicio, setHorarioInicio] = useState("08:00");
   const [horarioFim, setHorarioFim] = useState("18:00");
   const [horarioSelecionado, setHorarioSelecionado] = useState(null);
   const [erros, setErros] = useState({});
   const [verificando, setVerificando] = useState(false);
-  const [modalAberto, setModalAberto] = useState(false);
 
   const [disponibilidade, setDisponibilidade] = useState({
     datasIndisponiveis: [],
@@ -88,13 +91,17 @@ export default function CardReserva({ espaco }) {
     setVerificando(true);
     setTimeout(() => {
       setVerificando(false);
-      setModalAberto(true);
+      iniciarReserva({
+        espaco,
+        data,
+        horario: porHora ? horarioSelecionado : `${horarioInicio} às ${horarioFim}`,
+      });
+      navigate("/reserva");
     }, ATRASO_VERIFICACAO_MS);
   }
 
   return (
-    <>
-      <div className="flex flex-col gap-4 rounded-2xl bg-white p-4 shadow-md">
+    <div className="flex flex-col gap-4 rounded-2xl bg-white p-4 shadow-md">
         <div className="flex items-center justify-between">
           <p className="text-lg font-semibold text-gray-800">
             R$ {preco.toFixed(2)}
@@ -200,24 +207,14 @@ export default function CardReserva({ espaco }) {
           </div>
         )}
 
-        <Button
-          onClick={handleVerDisponibilidade}
-          disabled={!disponivel}
-          carregando={verificando}
-          className="w-full"
-        >
-          {disponivel ? "Ver disponibilidade" : "Indisponível"}
-        </Button>
-      </div>
-
-      {modalAberto && (
-        <ModalReservaSucesso
-          espaco={espaco}
-          data={data}
-          horario={porHora ? horarioSelecionado : `${horarioInicio} às ${horarioFim}`}
-          onFechar={() => setModalAberto(false)}
-        />
-      )}
-    </>
+      <Button
+        onClick={handleVerDisponibilidade}
+        disabled={!disponivel}
+        carregando={verificando}
+        className="w-full"
+      >
+        {disponivel ? "Ver disponibilidade" : "Indisponível"}
+      </Button>
+    </div>
   );
 }
