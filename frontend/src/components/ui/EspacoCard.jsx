@@ -1,8 +1,14 @@
+import { Link } from "react-router-dom";
+
 export default function EspacoCard({ espaco }) {
-  const { nome, tipo, preco, unidadePreco, capacidade, imagemCapa, disponivel } = espaco;
+  const { slug, nome, tipo, preco, unidadePreco, capacidade, imagemCapa, disponivel } =
+    espaco;
 
   return (
-    <div className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col hover:shadow-xl transition-shadow duration-300">
+    <Link
+      to={`/espacos/${slug}`}
+      className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col hover:shadow-xl transition-shadow duration-300"
+    >
       <div className="relative">
         <img
           src={imagemCapa}
@@ -36,14 +42,17 @@ export default function EspacoCard({ espaco }) {
             <span className="text-sm font-normal text-gray-400"> /{unidadePreco}</span>
           </p>
 
-          <button
-            disabled={!disponivel}
-            className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          <span
+            className={`text-sm font-medium px-4 py-2 rounded-lg transition-colors ${
+              disponivel
+                ? "bg-emerald-600 text-white"
+                : "bg-gray-300 text-white"
+            }`}
           >
-            Reservar
-          </button>
+            {disponivel ? "Reservar" : "Ver detalhes"}
+          </span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
