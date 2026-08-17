@@ -20,6 +20,13 @@ const HORARIOS_DISPONIVEIS = [
 ];
 
 const ATRASO_VERIFICACAO_MS = 600;
+const DURACAO_SLOT_HORAS = 2;
+
+function somarHoras(horario, horas) {
+  const [h, m] = horario.split(":").map(Number);
+  const novaHora = (h + horas) % 24;
+  return `${String(novaHora).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
 
 export default function CardReserva({ espaco }) {
   const { preco, unidadePreco, disponivel, slug } = espaco;
@@ -97,6 +104,8 @@ export default function CardReserva({ espaco }) {
         espaco,
         data,
         horario: porHora ? horarioSelecionado : `${horarioInicio} às ${horarioFim}`,
+        horarioInicio: porHora ? horarioSelecionado : horarioInicio,
+        horarioFim: porHora ? somarHoras(horarioSelecionado, DURACAO_SLOT_HORAS) : horarioFim,
       });
       navigate("/reserva");
     }, ATRASO_VERIFICACAO_MS);

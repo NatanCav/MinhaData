@@ -8,6 +8,7 @@ import Card from "../../components/ui/Card";
 import EmptyState from "../../components/ui/EmptyState";
 import ModalReservaSucesso from "../../components/ui/ModalReservaSucesso";
 import { IconeCalendario, IconeRelogio } from "../../components/ui/Icones";
+import { criarReserva } from "../../services/reservasService";
 
 const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -31,6 +32,9 @@ export default function ConfirmarReserva() {
   const [observacoes, setObservacoes] = useState("");
   const [erros, setErros] = useState({});
   const [modalAberto, setModalAberto] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [erroEnvio, setErroEnvio] = useState(null);
+  const [reservaConfirmada, setReservaConfirmada] = useState(null);
 
   if (!reserva) {
     return (
@@ -44,7 +48,7 @@ export default function ConfirmarReserva() {
     );
   }
 
-  const { espaco, data, horario } = reserva;
+  const { espaco, data, horario, horarioInicio, horarioFim } = reserva;
 
   function validar() {
     const novosErros = {};
@@ -60,15 +64,35 @@ export default function ConfirmarReserva() {
     return novosErros;
   }
 
-  function handleConfirmar(evento) {
+  async function handleConfirmar(evento) {
     evento.preventDefault();
 
     const novosErros = validar();
     setErros(novosErros);
     if (Object.keys(novosErros).length > 0) return;
 
-    definirFormulario({ nome, telefone, email, observacoes });
-    setModalAberto(true);
+    setErroEnvio(null);
+    setEnviando(true);
+    try {
+      const reservaCriada = await criarReserva({
+        espacoSlug: espaco.slug,
+        data,
+        horarioInicio,
+        horarioFim,
+        nomeCliente: nome,
+        telefoneCliente: telefone,
+        emailCliente: email,
+        observacoes,
+      });
+
+      definirFormulario({ nome, telefone, email, observacoes });
+      setReservaConfirmada(reservaCriada);
+      setModalAberto(true);
+    } catch (erro) {
+      setErroEnvio(erro.message || "Não foi possível concluir a reserva.");
+    } finally {
+      setEnviando(false);
+    }
   }
 
   function handleFecharModal() {
@@ -76,6 +100,12 @@ export default function ConfirmarReserva() {
     limparReserva();
     navigate("/");
   }
+
+  const horarioConfirmado = reservaConfirmada
+    ? espaco.unidadePreco === "hora"
+      ? reservaConfirmada.horarioInicio
+      : `${reservaConfirmada.horarioInicio} às ${reservaConfirmada.horarioFim}`
+    : horario;
 
   return (
     <div className="bg-gray-50">
@@ -155,7 +185,18 @@ export default function ConfirmarReserva() {
             </div>
           </Card>
 
-          <Button type="submit" className="w-full lg:w-auto">
+          {erroEnvio && (
+            <p className="text-sm text-red-500" role="alert">
+              {erroEnvio}
+            </p>
+          )}
+
+          <Button
+            type="submit"
+            carregando={enviando}
+            disabled={enviando}
+            className="w-full lg:w-auto"
+          >
             Confirmar Reserva
           </Button>
         </form>
@@ -190,11 +231,12 @@ export default function ConfirmarReserva() {
         </aside>
       </Container>
 
-      {modalAberto && (
+      {modalAberto && reservaConfirmada && (
         <ModalReservaSucesso
           espaco={espaco}
-          data={data}
-          horario={horario}
+          data={reservaConfirmada.data}
+          horario={horarioConfirmado}
+          codigoReserva={reservaConfirmada.id}
           onFechar={handleFecharModal}
         />
       )}
