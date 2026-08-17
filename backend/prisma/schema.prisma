@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  email     String   @unique
+  senhaHash String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reservas Reserva[]
+}
+
+model Espaco {
+  id                       Int      @id @default(autoincrement())
+  nome                     String
+  slug                     String   @unique
+  descricao                String
+  tipo                     String
+  localizacao              String
+  preco                    Float
+  unidadePreco             String
+  capacidade               Int      @default(0)
+  avaliacaoNota            Float    @default(0)
+  avaliacaoTotalAvaliacoes Int      @default(0)
+  imagemCapa               String?
+  galeria                  Json     @default("[]")
+  comodidades              Json     @default("[]")
+  informacoes              Json     @default("[]")
+  disponivel               Boolean  @default(true)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  reservas Reserva[]
+
+  @@index([tipo])
+}
+
+enum StatusReserva {
+  pendente
+  confirmada
+  recusada
+  cancelada
+}
+
+model Reserva {
+  id              Int           @id @default(autoincrement())
+  userId          Int
+  user            User          @relation(fields: [userId], references: [id])
+  espacoId        Int
+  espaco          Espaco        @relation(fields: [espacoId], references: [id])
+  data            String
+  horarioInicio   String
+  horarioFim      String
+  status          StatusReserva @default(pendente)
+  nomeCliente     String
+  telefoneCliente String
+  emailCliente    String
+  observacoes     String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([espacoId, data])
+  @@index([userId])
+}

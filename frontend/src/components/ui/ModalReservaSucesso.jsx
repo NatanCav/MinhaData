@@ -14,7 +14,13 @@ function formatarData(data) {
   });
 }
 
-export default function ModalReservaSucesso({ espaco, data, horario, onFechar }) {
+export default function ModalReservaSucesso({
+  espaco,
+  data,
+  horario,
+  codigoReserva,
+  onFechar,
+}) {
   const [visivel, setVisivel] = useState(false);
   const painelRef = useRef(null);
 
@@ -94,6 +100,9 @@ export default function ModalReservaSucesso({ espaco, data, horario, onFechar })
             <IconeRelogio className="h-4 w-4" />
             {horario}
           </div>
+          {codigoReserva && (
+            <p className="text-xs text-gray-400">Reserva nº {codigoReserva}</p>
+          )}
         </div>
 
         <Button onClick={fechar} className="mt-6 w-full">
