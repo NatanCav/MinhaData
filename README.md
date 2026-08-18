@@ -36,7 +36,7 @@
 
 ### Pré-requisitos
 * [Node.js](https://nodejs.org/) instalado
-* Banco de Dados [PostgreSQL](https://www.postgresql.org/) rodando localmente
+* [Docker](https://www.docker.com/) instalado (sobe o PostgreSQL localmente via `docker-compose.yml`)
 
 ### Passo a passo
 
@@ -50,11 +50,21 @@ git clone https://github.com/seu-usuario/nome-do-repositorio.git
 cd backend
 npm install
 ```
-* Crie um arquivo `.env` na raiz da pasta `backend` com a URL do seu banco de dados:
-  `DATABASE_URL="postgresql://usuario:senha@localhost:5432/agendamentos"`
+* Suba o banco de dados com Docker:
+```bash
+docker compose up -d
+```
+* Copie o arquivo de exemplo de variáveis de ambiente (o `.env` real não vai para o Git, cada dev cria o seu):
+```bash
+cp .env.example .env
+```
 * Crie as tabelas no banco de dados com o Prisma:
 ```bash
-npx prisma migrate dev --name init
+npx prisma migrate dev
+```
+* (Opcional) Popule o banco com dados de teste:
+```bash
+npm run prisma:seed
 ```
 * Rode a API:
 ```bash
