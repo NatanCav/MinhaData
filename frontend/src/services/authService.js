@@ -22,51 +22,69 @@ function paraSessao(usuario) {
   return { id: usuario.id, nome: usuario.nome, email: usuario.email };
 }
 
+function aguardar(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Hash local (SHA-256 + salt por usuário) só para não gravar a senha em
+// texto plano no localStorage deste mock — não é um substituto de um
+// hashing de senha real feito no back-end (ex.: bcrypt/argon2).
+async function hashSenha(senha, salt) {
+  const dados = new TextEncoder().encode(`${salt}:${senha}`);
+  const buffer = await crypto.subtle.digest("SHA-256", dados);
+  return Array.from(new Uint8Array(buffer))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 export async function cadastrar({ nome, email, senha }) {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const usuarios = lerUsuarios();
-      const emailNormalizado = email.trim().toLowerCase();
+  await aguardar(600);
 
-      if (usuarios.some((usuario) => usuario.email === emailNormalizado)) {
-        reject(new Error("Este e-mail já está cadastrado."));
-        return;
-      }
+  const usuarios = lerUsuarios();
+  const emailNormalizado = email.trim().toLowerCase();
 
-      const novoUsuario = {
-        id: crypto.randomUUID(),
-        nome: nome.trim(),
-        email: emailNormalizado,
-        senha,
-        criadoEm: new Date().toISOString(),
-      };
+  if (usuarios.some((usuario) => usuario.email === emailNormalizado)) {
+    throw new Error("Este e-mail já está cadastrado.");
+  }
 
-      salvarUsuarios([...usuarios, novoUsuario]);
+  const salt = crypto.randomUUID();
+  const senhaHash = await hashSenha(senha, salt);
 
-      const sessao = paraSessao(novoUsuario);
-      localStorage.setItem(CHAVE_SESSAO, JSON.stringify(sessao));
-      resolve(sessao);
-    }, 600);
-  });
+  const novoUsuario = {
+    id: crypto.randomUUID(),
+    nome: nome.trim(),
+    email: emailNormalizado,
+    salt,
+    senhaHash,
+    criadoEm: new Date().toISOString(),
+  };
+
+  salvarUsuarios([...usuarios, novoUsuario]);
+
+  const sessao = paraSessao(novoUsuario);
+  localStorage.setItem(CHAVE_SESSAO, JSON.stringify(sessao));
+  return sessao;
 }
 
 export async function login({ email, senha }) {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const usuarios = lerUsuarios();
-      const emailNormalizado = email.trim().toLowerCase();
-      const usuario = usuarios.find((item) => item.email === emailNormalizado);
+  await aguardar(600);
 
-      if (!usuario || usuario.senha !== senha) {
-        reject(new Error("E-mail ou senha inválidos."));
-        return;
-      }
+  const usuarios = lerUsuarios();
+  const emailNormalizado = email.trim().toLowerCase();
+  const usuario = usuarios.find((item) => item.email === emailNormalizado);
 
-      const sessao = paraSessao(usuario);
-      localStorage.setItem(CHAVE_SESSAO, JSON.stringify(sessao));
-      resolve(sessao);
-    }, 600);
-  });
+  if (!usuario) {
+    throw new Error("E-mail ou senha inválidos.");
+  }
+
+  const senhaHash = await hashSenha(senha, usuario.salt);
+  if (senhaHash !== usuario.senhaHash) {
+    throw new Error("E-mail ou senha inválidos.");
+  }
+
+  const sessao = paraSessao(usuario);
+  localStorage.setItem(CHAVE_SESSAO, JSON.stringify(sessao));
+  return sessao;
 }
 
 export async function logout() {

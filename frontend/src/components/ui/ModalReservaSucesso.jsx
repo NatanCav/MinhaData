@@ -86,7 +86,7 @@ export default function ModalReservaSucesso({
             Reserva realizada com sucesso!
           </h2>
           <p className="text-sm text-gray-500">
-            Enviamos os detalhes da sua reserva para o seu WhatsApp.
+            Sua solicitação foi enviada. Aguarde a confirmação do proprietário.
           </p>
         </div>
 
