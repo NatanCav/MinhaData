@@ -5,7 +5,7 @@ import SectionTitle from "../../components/ui/SectionTitle";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Avatar from "../../components/ui/Avatar";
-import { IconeSair } from "../../components/ui/Icones";
+import { IconeCalendario, IconeSair } from "../../components/ui/Icones";
 
 export default function Perfil() {
   const { usuario, sair } = useAuth();
@@ -30,6 +30,14 @@ export default function Perfil() {
             <p className="text-lg font-semibold text-gray-800">{usuario.nome}</p>
             <p className="text-sm text-gray-500">{usuario.email}</p>
           </div>
+
+          <Button
+            onClick={() => navigate("/minhas-reservas")}
+            className="w-full"
+          >
+            <IconeCalendario className="h-4 w-4" />
+            Minhas reservas
+          </Button>
 
           <Button
             variante="secundario"

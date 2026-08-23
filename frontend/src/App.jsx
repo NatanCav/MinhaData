@@ -10,6 +10,7 @@ import Login from "./pages/Login/Login.jsx";
 import Cadastro from "./pages/Cadastro/Cadastro.jsx";
 import EsqueciMinhaSenha from "./pages/EsqueciMinhaSenha/EsqueciMinhaSenha.jsx";
 import Perfil from "./pages/Perfil/Perfil.jsx";
+import MinhasReservas from "./pages/MinhasReservas/MinhasReservas.jsx";
 import { ReservaProvider } from "./context/ReservaContext.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import ProtectedRoute from "./components/auth/ProtectedRoute.jsx";
@@ -35,6 +36,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Perfil />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/minhas-reservas"
+                element={
+                  <ProtectedRoute>
+                    <MinhasReservas />
                   </ProtectedRoute>
                 }
               />
