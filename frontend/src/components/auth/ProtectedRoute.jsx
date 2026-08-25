@@ -2,8 +2,13 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/useAuth";
 import Spinner from "../ui/Spinner";
 
+<<<<<<< HEAD
 export default function ProtectedRoute({ children }) {
   const { autenticado, carregandoSessao } = useAuth();
+=======
+export default function ProtectedRoute({ children, requiredRole }) {
+  const { autenticado, usuario } = useAuth();
+>>>>>>> eadef58 (Painel Proprietário criado)
   const localizacao = useLocation();
 
   if (carregandoSessao) {
