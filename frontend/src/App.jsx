@@ -11,9 +11,15 @@ import Cadastro from "./pages/Cadastro/Cadastro.jsx";
 import EsqueciMinhaSenha from "./pages/EsqueciMinhaSenha/EsqueciMinhaSenha.jsx";
 import Perfil from "./pages/Perfil/Perfil.jsx";
 import MinhasReservas from "./pages/MinhasReservas/MinhasReservas.jsx";
+import Painel from "./pages/Painel/Painel.jsx";
+import PainelReservas from "./pages/PainelReservas/PainelReservas.jsx";
+import PainelEspacos from "./pages/PainelEspacos/PainelEspacos.jsx";
+import PainelEspacoForm from "./pages/PainelEspacoForm/PainelEspacoForm.jsx";
 import { ReservaProvider } from "./context/ReservaContext.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import ProtectedRoute from "./components/auth/ProtectedRoute.jsx";
+import PainelLayout from "./components/layout/PainelLayout.jsx";
+import { PAPEL_PROPRIETARIO } from "./services/authService";
 
 function App() {
   return (
@@ -47,6 +53,20 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/gestao"
+                element={
+                  <ProtectedRoute requiredRole={PAPEL_PROPRIETARIO}>
+                    <PainelLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Painel />} />
+                <Route path="reservas" element={<PainelReservas />} />
+                <Route path="espacos" element={<PainelEspacos />} />
+                <Route path="espacos/novo" element={<PainelEspacoForm />} />
+                <Route path="espacos/:slug/editar" element={<PainelEspacoForm />} />
+              </Route>
             </Routes>
           </div>
 

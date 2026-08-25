@@ -4,8 +4,15 @@
 // Este arquivo é o "contrato" que combinamos com o Pedro:
 // a API deve devolver os espaços exatamente neste formato.
 //
-// Quando a API real estiver pronta, este arquivo pode ser apagado —
-// só o espacosService.js precisa mudar.
+// O back-end já implementa GET /api/espacos e GET /api/espacos/:slug (ver
+// backend/src/routes/espacosRoutes.js), seedados a partir deste mesmo
+// arquivo (ver backend/prisma/seed.js) — por isso espacosService.getEspacos
+// usa fetch de verdade, não este mock, para listagem. O que ainda não
+// existe no back-end é criação/edição de espaço (POST/PUT), então as
+// funções no fim deste arquivo simulam essa parte, em memória, para o
+// painel de gestão do proprietário.
+
+import { PROPRIETARIO_ID_PADRAO } from "./proprietario";
 
 export const espacosMock = [
   {
@@ -159,4 +166,93 @@ export const espacosMock = [
 // Helper útil para a tela de detalhes: busca um espaço pelo slug da URL.
 export function buscarEspacoPorSlug(slug) {
   return espacosMock.find((espaco) => espaco.slug === slug);
+}
+
+// --- Mock de escrita para o painel de gestão -------------------------------
+//
+// Enquanto o back-end não expõe criação/edição de espaço, mantemos aqui, em
+// memória, os espaços criados pelo proprietário nesta sessão e os campos
+// alterados em espaços já existentes (vindos do back-end via fetch). O
+// espacosService.js mescla esse estado com a lista real ao montar a visão
+// "meus espaços" do painel. Por não haver persistência real, o que for
+// criado/editado aqui não aparece na vitrine pública (que só lê da API).
+
+let proximoIdEspacoMock = 1000;
+const espacosCriadosPeloProprietario = [];
+const edicoesPorSlug = new Map();
+
+const REGEX_DIACRITICOS = /[̀-ͯ]/g;
+
+function gerarSlug(nome) {
+  return nome
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(REGEX_DIACRITICOS, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function slugJaExiste(slug, espacosReais) {
+  return (
+    espacosReais.some((espaco) => espaco.slug === slug) ||
+    espacosCriadosPeloProprietario.some((espaco) => espaco.slug === slug)
+  );
+}
+
+export function criarEspacoMock(dados, espacosReais = espacosMock) {
+  const slugBase = gerarSlug(dados.nome);
+  let slug = slugBase;
+  let sufixo = 2;
+  while (slugJaExiste(slug, espacosReais)) {
+    slug = `${slugBase}-${sufixo}`;
+    sufixo += 1;
+  }
+
+  const novoEspaco = {
+    avaliacao: { nota: 0, totalAvaliacoes: 0 },
+    galeria: dados.imagemCapa ? [dados.imagemCapa] : [],
+    comodidades: [],
+    informacoes: [],
+    ...dados,
+    id: proximoIdEspacoMock++,
+    slug,
+    proprietarioId: PROPRIETARIO_ID_PADRAO,
+  };
+
+  espacosCriadosPeloProprietario.push(novoEspaco);
+  return novoEspaco;
+}
+
+export function atualizarEspacoMock(slug, dados) {
+  const espacoCriado = espacosCriadosPeloProprietario.find(
+    (espaco) => espaco.slug === slug
+  );
+  if (espacoCriado) {
+    Object.assign(espacoCriado, dados);
+    return espacoCriado;
+  }
+
+  const patchAtual = edicoesPorSlug.get(slug) || {};
+  const patchNovo = { ...patchAtual, ...dados };
+  edicoesPorSlug.set(slug, patchNovo);
+  return patchNovo;
+}
+
+// Mescla a lista real (vinda do back-end) com criações/edições feitas no
+// painel nesta sessão, marcando todos com o único proprietário do produto.
+export function listarEspacosDoProprietario(espacosReais) {
+  const reaisComEdicoes = espacosReais.map((espaco) => ({
+    ...espaco,
+    proprietarioId: PROPRIETARIO_ID_PADRAO,
+    ...(edicoesPorSlug.get(espaco.slug) || {}),
+  }));
+
+  return [...reaisComEdicoes, ...espacosCriadosPeloProprietario];
+}
+
+export function buscarEspacoDoProprietarioPorSlug(slug, espacosReais) {
+  return listarEspacosDoProprietario(espacosReais).find(
+    (espaco) => espaco.slug === slug
+  );
 }

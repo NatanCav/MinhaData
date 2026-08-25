@@ -2,6 +2,8 @@
 import { obterSessao } from "./authService";
 import {
   atualizarStatusReserva,
+  atualizarStatusReservaSistema,
+  buscarReservasDoProprietario,
   buscarReservasPorUsuario,
 } from "../mocks/reservas";
 
@@ -69,6 +71,91 @@ export async function cancelarReserva(id) {
       }
 
       resolve(atualizarStatusReserva(sessao.id, id, "cancelada"));
+    }, 400);
+  });
+}
+
+// O back-end ainda não expõe um endpoint de listagem de reservas por
+// proprietário — mantido como mock (ver reservasRoutes.js) até essa rota
+// existir. Ver mocks/reservas.js sobre por que essa listagem usa um
+// dataset separado do de "minhas reservas" do cliente.
+export async function getReservasDoProprietario() {
+  const sessao = obterSessao();
+
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(sessao ? buscarReservasDoProprietario(sessao.id) : []);
+    }, 400);
+  });
+}
+
+// Endpoint futuro mencionado no roadmap (PATCH /reservas/:id/status) ainda
+// não existe no back-end — as três ações abaixo permanecem mockadas.
+export async function aprovarReserva(id) {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      const sessao = obterSessao();
+      const reserva = sessao
+        ? buscarReservasDoProprietario(sessao.id).find((item) => item.id === id)
+        : null;
+
+      if (!reserva) {
+        reject(new Error("Reserva não encontrada."));
+        return;
+      }
+
+      if (reserva.status !== "pendente") {
+        reject(new Error("Esta reserva não pode mais ser aprovada."));
+        return;
+      }
+
+      resolve(atualizarStatusReservaSistema(id, "confirmada"));
+    }, 400);
+  });
+}
+
+export async function recusarReserva(id) {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      const sessao = obterSessao();
+      const reserva = sessao
+        ? buscarReservasDoProprietario(sessao.id).find((item) => item.id === id)
+        : null;
+
+      if (!reserva) {
+        reject(new Error("Reserva não encontrada."));
+        return;
+      }
+
+      if (reserva.status !== "pendente") {
+        reject(new Error("Esta reserva não pode mais ser recusada."));
+        return;
+      }
+
+      resolve(atualizarStatusReservaSistema(id, "recusada"));
+    }, 400);
+  });
+}
+
+export async function cancelarReservaProprietario(id) {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      const sessao = obterSessao();
+      const reserva = sessao
+        ? buscarReservasDoProprietario(sessao.id).find((item) => item.id === id)
+        : null;
+
+      if (!reserva) {
+        reject(new Error("Reserva não encontrada."));
+        return;
+      }
+
+      if (!podeCancelarReserva(reserva.status)) {
+        reject(new Error("Esta reserva não pode mais ser cancelada."));
+        return;
+      }
+
+      resolve(atualizarStatusReservaSistema(id, "cancelada"));
     }, 400);
   });
 }

@@ -2,8 +2,18 @@
 // Autenticação mockada em localStorage — simula o comportamento assíncrono
 // e o contrato da futura API REST de autenticação.
 
+import {
+  EMAIL_PROPRIETARIO_PADRAO,
+  NOME_PROPRIETARIO_PADRAO,
+  PROPRIETARIO_ID_PADRAO,
+  SENHA_PROPRIETARIO_PADRAO,
+} from "../mocks/proprietario";
+
 const CHAVE_USUARIOS = "minhaData:usuarios";
 const CHAVE_SESSAO = "minhaData:sessao";
+
+export const PAPEL_CLIENTE = "cliente";
+export const PAPEL_PROPRIETARIO = "proprietario";
 
 function lerUsuarios() {
   try {
@@ -19,11 +29,44 @@ function salvarUsuarios(usuarios) {
 }
 
 function paraSessao(usuario) {
-  return { id: usuario.id, nome: usuario.nome, email: usuario.email };
+  return {
+    id: usuario.id,
+    nome: usuario.nome,
+    email: usuario.email,
+    // Usuários cadastrados antes da introdução do papel (role) não têm o
+    // campo salvo no localStorage — tratados como cliente por padrão.
+    role: usuario.role || PAPEL_CLIENTE,
+  };
 }
 
 function aguardar(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// O back-end ainda não modela múltiplos usuários com papel de proprietário
+// (ver schema.prisma) — este mock pré-cadastra a única conta de
+// proprietário do produto (ver CLAUDE.md: "único proprietário de espaços
+// de lazer"), com id fixo, para permitir testar o painel de gestão via
+// login sem precisar de um fluxo de cadastro dedicado a esse papel.
+async function garantirProprietarioPadrao() {
+  const usuarios = lerUsuarios();
+  if (usuarios.some((usuario) => usuario.role === PAPEL_PROPRIETARIO)) return;
+
+  const salt = crypto.randomUUID();
+  const senhaHash = await hashSenha(SENHA_PROPRIETARIO_PADRAO, salt);
+
+  salvarUsuarios([
+    ...usuarios,
+    {
+      id: PROPRIETARIO_ID_PADRAO,
+      nome: NOME_PROPRIETARIO_PADRAO,
+      email: EMAIL_PROPRIETARIO_PADRAO,
+      salt,
+      senhaHash,
+      role: PAPEL_PROPRIETARIO,
+      criadoEm: new Date().toISOString(),
+    },
+  ]);
 }
 
 // Hash local (SHA-256 + salt por usuário) só para não gravar a senha em
@@ -56,6 +99,9 @@ export async function cadastrar({ nome, email, senha }) {
     email: emailNormalizado,
     salt,
     senhaHash,
+    // Autocadastro é sempre de cliente — a conta de proprietário é única e
+    // pré-provisionada (ver garantirProprietarioPadrao acima).
+    role: PAPEL_CLIENTE,
     criadoEm: new Date().toISOString(),
   };
 
@@ -114,11 +160,21 @@ export async function recuperarSenha(email) {
 export function obterSessao() {
   try {
     const dados = localStorage.getItem(CHAVE_SESSAO);
-    return dados ? JSON.parse(dados) : null;
+    if (!dados) return null;
+
+    const sessao = JSON.parse(dados);
+    // Sessões salvas antes da introdução do papel (role) não têm o campo —
+    // tratadas como cliente por padrão, mesma regra de paraSessao.
+    return { ...sessao, role: sessao.role || PAPEL_CLIENTE };
   } catch {
     return null;
   }
 }
+
+// Pré-provisiona a conta única de proprietário assim que o módulo é
+// carregado, para que ela já esteja disponível para login sem exigir um
+// passo de setup manual (ver garantirProprietarioPadrao acima).
+garantirProprietarioPadrao();
 
 // Quando o back-end estiver disponível, este arquivo vira só isto:
 //
