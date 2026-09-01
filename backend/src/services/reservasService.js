@@ -1,12 +1,11 @@
 import { prisma } from "../lib/prisma.js";
 import { AppError } from "../middlewares/AppError.js";
+import { cpfValido, normalizarCpf } from "../lib/cpf.js";
 import { buscarEspacoEntidadePorSlug } from "./espacosService.js";
 
 const REGEX_DATA = /^\d{4}-\d{2}-\d{2}$/;
 const REGEX_HORARIO = /^([01]\d|2[0-3]):[0-5]\d$/;
 const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const USUARIO_TESTE_ID = Number(process.env.USUARIO_TESTE_ID ?? 1);
 
 function validarData(data) {
   if (!REGEX_DATA.test(data)) return false;
@@ -27,6 +26,7 @@ function validarPayload({
   nomeCliente,
   telefoneCliente,
   emailCliente,
+  cpfCliente,
 }) {
   if (!espacoSlug || typeof espacoSlug !== "string") {
     throw new AppError("Informe o espaço da reserva.");
@@ -51,6 +51,9 @@ function validarPayload({
   }
   if (!emailCliente || !REGEX_EMAIL.test(emailCliente.trim())) {
     throw new AppError("Informe um e-mail válido.");
+  }
+  if (!cpfCliente || !cpfValido(cpfCliente)) {
+    throw new AppError("Informe um CPF válido para identificação no contato com o estabelecimento.");
   }
 }
 
@@ -86,6 +89,7 @@ function paraApi(reserva) {
     nomeCliente: reserva.nomeCliente,
     telefoneCliente: reserva.telefoneCliente,
     emailCliente: reserva.emailCliente,
+    cpfCliente: reserva.cpfCliente,
     observacoes: reserva.observacoes,
     createdAt: reserva.createdAt,
     espaco: {
@@ -97,8 +101,20 @@ function paraApi(reserva) {
   };
 }
 
-export async function criarReserva(payload) {
+export async function criarReserva(userId, payload) {
   validarPayload(payload);
+
+  const usuario = await prisma.user.findUnique({ where: { id: userId } });
+  if (!usuario) {
+    throw new AppError("Usuário não encontrado.", 404);
+  }
+
+  if (usuario.tipoConta === "PJ" && !usuario.doisFatoresAtivo) {
+    throw new AppError(
+      "Ative a autenticação de dois fatores na sua conta antes de reservar como pessoa jurídica.",
+      403
+    );
+  }
 
   const espaco = await buscarEspacoEntidadePorSlug(payload.espacoSlug);
 
@@ -114,18 +130,40 @@ export async function criarReserva(payload) {
 
   await garantirSemConflito({ espacoId: espaco.id, ...dadosReserva });
 
-  const reserva = await prisma.reserva.create({
-    data: {
-      ...dadosReserva,
-      userId: USUARIO_TESTE_ID,
-      espacoId: espaco.id,
-      nomeCliente: payload.nomeCliente.trim(),
-      telefoneCliente: payload.telefoneCliente.trim(),
-      emailCliente: payload.emailCliente.trim(),
-      observacoes: payload.observacoes?.trim() || null,
-    },
-    include: { espaco: true },
-  });
+  const cpfClienteNormalizado = normalizarCpf(payload.cpfCliente);
+
+  if (usuario.cpf && usuario.cpf !== cpfClienteNormalizado) {
+    throw new AppError("O CPF informado não corresponde ao CPF já registrado nesta conta.", 409);
+  }
+
+  if (!usuario.cpf) {
+    const cpfEmUso = await prisma.user.findFirst({
+      where: { cpf: cpfClienteNormalizado, NOT: { id: userId } },
+    });
+    if (cpfEmUso) {
+      throw new AppError("Este CPF já está associado a outra conta.", 409);
+    }
+  }
+
+  const [reserva] = await prisma.$transaction([
+    prisma.reserva.create({
+      data: {
+        ...dadosReserva,
+        userId,
+        espacoId: espaco.id,
+        nomeCliente: payload.nomeCliente.trim(),
+        telefoneCliente: payload.telefoneCliente.trim(),
+        emailCliente: payload.emailCliente.trim(),
+        cpfCliente: cpfClienteNormalizado,
+        observacoes: payload.observacoes?.trim() || null,
+      },
+      include: { espaco: true },
+    }),
+    prisma.user.update({
+      where: { id: userId },
+      data: { cpf: cpfClienteNormalizado },
+    }),
+  ]);
 
   return paraApi(reserva);
 }

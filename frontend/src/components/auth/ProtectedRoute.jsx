@@ -1,9 +1,18 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/useAuth";
+import Spinner from "../ui/Spinner";
 
 export default function ProtectedRoute({ children }) {
-  const { autenticado } = useAuth();
+  const { autenticado, carregandoSessao } = useAuth();
   const localizacao = useLocation();
+
+  if (carregandoSessao) {
+    return (
+      <div className="flex min-h-[calc(100vh-73px)] items-center justify-center">
+        <Spinner tamanho="lg" className="text-emerald-600" />
+      </div>
+    );
+  }
 
   if (!autenticado) {
     return (

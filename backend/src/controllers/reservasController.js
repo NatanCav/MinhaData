@@ -2,7 +2,7 @@ import * as reservasService from "../services/reservasService.js";
 
 export async function criar(req, res, next) {
   try {
-    const reserva = await reservasService.criarReserva(req.body ?? {});
+    const reserva = await reservasService.criarReserva(req.usuarioId, req.body ?? {});
     res.status(201).json(reserva);
   } catch (erro) {
     next(erro);

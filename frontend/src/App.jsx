@@ -10,6 +10,7 @@ import Login from "./pages/Login/Login.jsx";
 import Cadastro from "./pages/Cadastro/Cadastro.jsx";
 import EsqueciMinhaSenha from "./pages/EsqueciMinhaSenha/EsqueciMinhaSenha.jsx";
 import Perfil from "./pages/Perfil/Perfil.jsx";
+import Configuracoes from "./pages/Configuracoes/Configuracoes.jsx";
 import { ReservaProvider } from "./context/ReservaContext.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import ProtectedRoute from "./components/auth/ProtectedRoute.jsx";
@@ -26,7 +27,14 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/espacos" element={<Vitrine />} />
               <Route path="/espacos/:slug" element={<DetalheEspaco />} />
-              <Route path="/reserva" element={<ConfirmarReserva />} />
+              <Route
+                path="/reserva"
+                element={
+                  <ProtectedRoute>
+                    <ConfirmarReserva />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/login" element={<Login />} />
               <Route path="/cadastro" element={<Cadastro />} />
               <Route path="/esqueci-minha-senha" element={<EsqueciMinhaSenha />} />
@@ -35,6 +43,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Perfil />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/configuracoes"
+                element={
+                  <ProtectedRoute>
+                    <Configuracoes />
                   </ProtectedRoute>
                 }
               />

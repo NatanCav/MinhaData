@@ -9,17 +9,24 @@ import Button from "../../components/ui/Button";
 const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Login() {
-  const { entrar } = useAuth();
+  const { entrar, confirmarDoisFatoresLogin } = useAuth();
   const navigate = useNavigate();
   const localizacao = useLocation();
 
+  const [etapa, setEtapa] = useState("credenciais");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [codigo, setCodigo] = useState("");
   const [erros, setErros] = useState({});
   const [erroEnvio, setErroEnvio] = useState(null);
   const [enviando, setEnviando] = useState(false);
 
-  function validar() {
+  function irParaDestino() {
+    const destino = localizacao.state?.from ?? "/";
+    navigate(destino, { replace: true });
+  }
+
+  function validarCredenciais() {
     const novosErros = {};
 
     if (!email.trim()) {
@@ -36,20 +43,87 @@ export default function Login() {
     evento.preventDefault();
     setErroEnvio(null);
 
-    const novosErros = validar();
+    const novosErros = validarCredenciais();
     setErros(novosErros);
     if (Object.keys(novosErros).length > 0) return;
 
     setEnviando(true);
     try {
-      await entrar({ email, senha });
-      const destino = localizacao.state?.from ?? "/";
-      navigate(destino, { replace: true });
+      const resultado = await entrar({ email, senha });
+      if (resultado.requerDoisFatores) {
+        setEtapa("codigo");
+      } else {
+        irParaDestino();
+      }
     } catch (erro) {
       setErroEnvio(erro.message);
     } finally {
       setEnviando(false);
     }
+  }
+
+  async function handleConfirmarCodigo(evento) {
+    evento.preventDefault();
+    setErroEnvio(null);
+
+    if (!codigo.trim()) {
+      setErros({ codigo: "Informe o código de verificação." });
+      return;
+    }
+
+    setEnviando(true);
+    try {
+      await confirmarDoisFatoresLogin(codigo.trim());
+      irParaDestino();
+    } catch (erro) {
+      setErroEnvio(erro.message);
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  if (etapa === "codigo") {
+    return (
+      <AuthLayout
+        titulo="Verificação em duas etapas"
+        subtitulo="Informe o código gerado no seu aplicativo autenticador."
+      >
+        <form onSubmit={handleConfirmarCodigo} className="flex flex-col gap-4" noValidate>
+          <Input
+            id="codigo"
+            label="Código de verificação"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={10}
+            value={codigo}
+            onChange={(evento) => {
+              setCodigo(evento.target.value);
+              setErros((atual) => ({ ...atual, codigo: null }));
+            }}
+            erro={erros.codigo}
+          />
+
+          {erroEnvio && <p className="text-sm text-red-500">{erroEnvio}</p>}
+
+          <Button type="submit" carregando={enviando} className="w-full">
+            Confirmar
+          </Button>
+
+          <Button
+            type="button"
+            variante="secundario"
+            onClick={() => {
+              setEtapa("credenciais");
+              setCodigo("");
+              setErroEnvio(null);
+            }}
+          >
+            Voltar
+          </Button>
+        </form>
+      </AuthLayout>
+    );
   }
 
   return (

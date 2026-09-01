@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useReserva } from "../../context/useReserva";
+import { useAuth } from "../../context/useAuth";
 import Container from "../../components/ui/Container";
 import SectionTitle from "../../components/ui/SectionTitle";
 import Button from "../../components/ui/Button";
@@ -11,6 +12,29 @@ import { IconeCalendario, IconeRelogio } from "../../components/ui/Icones";
 import { criarReserva } from "../../services/reservasService";
 
 const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function normalizarCpf(cpf) {
+  return String(cpf ?? "").replace(/\D/g, "");
+}
+
+function calcularDigitoVerificador(base) {
+  let soma = 0;
+  for (let i = 0; i < base.length; i++) {
+    soma += Number(base[i]) * (base.length + 1 - i);
+  }
+  const resto = (soma * 10) % 11;
+  return resto === 10 ? 0 : resto;
+}
+
+function cpfValido(cpf) {
+  const digitos = normalizarCpf(cpf);
+  if (digitos.length !== 11 || /^(\d)\1{10}$/.test(digitos)) return false;
+
+  const digito1 = calcularDigitoVerificador(digitos.slice(0, 9));
+  const digito2 = calcularDigitoVerificador(digitos.slice(0, 10));
+
+  return digito1 === Number(digitos[9]) && digito2 === Number(digitos[10]);
+}
 
 function formatarData(data) {
   if (!data) return "";
@@ -24,11 +48,13 @@ function formatarData(data) {
 
 export default function ConfirmarReserva() {
   const { reserva, definirFormulario, limparReserva } = useReserva();
+  const { usuario } = useAuth();
   const navigate = useNavigate();
 
-  const [nome, setNome] = useState("");
-  const [telefone, setTelefone] = useState("");
-  const [email, setEmail] = useState("");
+  const [nome, setNome] = useState(usuario?.nome ?? "");
+  const [telefone, setTelefone] = useState(usuario?.telefone ?? "");
+  const [email, setEmail] = useState(usuario?.email ?? "");
+  const [cpf, setCpf] = useState(usuario?.cpf ?? "");
   const [observacoes, setObservacoes] = useState("");
   const [erros, setErros] = useState({});
   const [modalAberto, setModalAberto] = useState(false);
@@ -60,6 +86,11 @@ export default function ConfirmarReserva() {
     } else if (!REGEX_EMAIL.test(email.trim())) {
       novosErros.email = "Informe um e-mail válido.";
     }
+    if (!cpf.trim()) {
+      novosErros.cpf = "Informe seu CPF para identificação junto ao estabelecimento.";
+    } else if (!cpfValido(cpf)) {
+      novosErros.cpf = "Informe um CPF válido.";
+    }
 
     return novosErros;
   }
@@ -82,10 +113,11 @@ export default function ConfirmarReserva() {
         nomeCliente: nome,
         telefoneCliente: telefone,
         emailCliente: email,
+        cpfCliente: cpf,
         observacoes,
       });
 
-      definirFormulario({ nome, telefone, email, observacoes });
+      definirFormulario({ nome, telefone, email, cpf, observacoes });
       setReservaConfirmada(reservaCriada);
       setModalAberto(true);
     } catch (erro) {
@@ -169,6 +201,28 @@ export default function ConfirmarReserva() {
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600"
               />
               {erros.email && <p className="text-xs text-red-500">{erros.email}</p>}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label htmlFor="cpf" className="text-sm font-medium text-gray-700">
+                CPF
+              </label>
+              <input
+                id="cpf"
+                type="text"
+                inputMode="numeric"
+                placeholder="000.000.000-00"
+                value={cpf}
+                onChange={(evento) => {
+                  setCpf(evento.target.value);
+                  setErros((atual) => ({ ...atual, cpf: null }));
+                }}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+              />
+              <p className="text-xs text-gray-400">
+                Necessário para identificação no contato com o estabelecimento.
+              </p>
+              {erros.cpf && <p className="text-xs text-red-500">{erros.cpf}</p>}
             </div>
 
             <div className="flex flex-col gap-1">

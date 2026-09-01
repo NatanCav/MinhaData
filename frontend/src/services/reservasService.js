@@ -4,6 +4,7 @@ export async function criarReserva(dadosReserva) {
   const res = await fetch("/api/reservas", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify(dadosReserva),
   });
 

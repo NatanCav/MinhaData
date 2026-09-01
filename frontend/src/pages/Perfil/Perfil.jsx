@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/useAuth";
 import Container from "../../components/ui/Container";
 import SectionTitle from "../../components/ui/SectionTitle";
@@ -30,6 +30,13 @@ export default function Perfil() {
             <p className="text-lg font-semibold text-gray-800">{usuario.nome}</p>
             <p className="text-sm text-gray-500">{usuario.email}</p>
           </div>
+
+          <Link
+            to="/configuracoes"
+            className="w-full rounded-lg border border-gray-200 px-4 py-2 text-center text-sm font-medium text-gray-600 transition-colors hover:border-emerald-600 hover:text-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+          >
+            Configurações da conta
+          </Link>
 
           <Button
             variante="secundario"

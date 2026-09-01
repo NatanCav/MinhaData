@@ -7,15 +7,70 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum TipoConta {
+  PF
+  PJ
+}
+
 model User {
-  id        Int      @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   nome      String
-  email     String   @unique
+  email     String    @unique
   senhaHash String
+  cpf       String?   @unique
+  telefone  String?
+  telefoneVerificado Boolean @default(false)
+  tipoConta TipoConta @default(PF)
+
+  doisFatoresAtivo         Boolean @default(false)
+  doisFatoresSecret        String?
+  doisFatoresSecretPendente String?
+  doisFatoresCodigosBackup Json    @default("[]")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  reservas Reserva[]
+  reservas               Reserva[]
+  refreshTokens          RefreshToken[]
+  tokensRecuperacaoSenha PasswordResetToken[]
+  verificacoesTelefone   VerificacaoTelefone[]
+}
+
+model RefreshToken {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id])
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id])
+  tokenHash String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model VerificacaoTelefone {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  telefone   String
+  codigoHash String
+  tentativas Int      @default(0)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Espaco {
@@ -63,6 +118,7 @@ model Reserva {
   nomeCliente     String
   telefoneCliente String
   emailCliente    String
+  cpfCliente      String
   observacoes     String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
