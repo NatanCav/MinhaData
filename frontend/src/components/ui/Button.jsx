@@ -12,6 +12,7 @@ const FOCO =
 
 export default function Button({
   children,
+  as: Tag = "button",
   variante = "primario",
   type = "button",
   disabled = false,
@@ -19,15 +20,16 @@ export default function Button({
   className = "",
   ...props
 }) {
+  const propsEspecificos = Tag === "button" ? { type, disabled: disabled || carregando } : {};
+
   return (
-    <button
-      type={type}
-      disabled={disabled || carregando}
+    <Tag
       className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${FOCO} ${VARIANTES[variante]} ${className}`}
+      {...propsEspecificos}
       {...props}
     >
       {carregando && <Spinner aria-hidden="true" />}
       {children}
-    </button>
+    </Tag>
   );
 }

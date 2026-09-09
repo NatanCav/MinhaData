@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { IconeCalendario, IconeFechar, IconeMenu } from "../ui/Icones";
 import { useAuth } from "../../context/useAuth";
+import { PAPEL_PROPRIETARIO } from "../../services/authService";
 import Avatar from "../ui/Avatar";
 
 const LINKS = [
@@ -52,13 +53,29 @@ export default function Header() {
           </Link>
 
           {autenticado ? (
-            <Link
-              to="/perfil"
-              className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
-              aria-label="Meu perfil"
-            >
-              <Avatar nome={usuario.nome} tamanho="sm" />
-            </Link>
+            <>
+              {usuario.role === PAPEL_PROPRIETARIO && (
+                <Link
+                  to="/gestao"
+                  className="rounded text-sm font-medium text-gray-600 transition-colors hover:text-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+                >
+                  Painel de gestão
+                </Link>
+              )}
+              <Link
+                to="/minhas-reservas"
+                className="rounded text-sm font-medium text-gray-600 transition-colors hover:text-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+              >
+                Minhas reservas
+              </Link>
+              <Link
+                to="/perfil"
+                className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+                aria-label="Meu perfil"
+              >
+                <Avatar nome={usuario.nome} tamanho="sm" />
+              </Link>
+            </>
           ) : (
             <Link
               to="/login"
@@ -108,14 +125,32 @@ export default function Header() {
           </Link>
 
           {autenticado ? (
-            <Link
-              to="/perfil"
-              onClick={() => setMenuAberto(false)}
-              className="flex items-center gap-3 rounded text-sm font-medium text-gray-600 transition-colors hover:text-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
-            >
-              <Avatar nome={usuario.nome} tamanho="sm" />
-              Meu perfil
-            </Link>
+            <>
+              {usuario.role === PAPEL_PROPRIETARIO && (
+                <Link
+                  to="/gestao"
+                  onClick={() => setMenuAberto(false)}
+                  className="rounded text-sm font-medium text-gray-600 transition-colors hover:text-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+                >
+                  Painel de gestão
+                </Link>
+              )}
+              <Link
+                to="/minhas-reservas"
+                onClick={() => setMenuAberto(false)}
+                className="rounded text-sm font-medium text-gray-600 transition-colors hover:text-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+              >
+                Minhas reservas
+              </Link>
+              <Link
+                to="/perfil"
+                onClick={() => setMenuAberto(false)}
+                className="flex items-center gap-3 rounded text-sm font-medium text-gray-600 transition-colors hover:text-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+              >
+                <Avatar nome={usuario.nome} tamanho="sm" />
+                Meu perfil
+              </Link>
+            </>
           ) : (
             <Link
               to="/login"

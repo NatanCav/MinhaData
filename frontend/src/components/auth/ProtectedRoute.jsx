@@ -20,5 +20,9 @@ export default function ProtectedRoute({ children }) {
     );
   }
 
+  if (requiredRole && usuario.role !== requiredRole) {
+    return <Navigate to="/" replace />;
+  }
+
   return children;
 }

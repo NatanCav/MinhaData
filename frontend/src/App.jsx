@@ -14,6 +14,8 @@ import Configuracoes from "./pages/Configuracoes/Configuracoes.jsx";
 import { ReservaProvider } from "./context/ReservaContext.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import ProtectedRoute from "./components/auth/ProtectedRoute.jsx";
+import PainelLayout from "./components/layout/PainelLayout.jsx";
+import { PAPEL_PROPRIETARIO } from "./services/authService";
 
 function App() {
   return (

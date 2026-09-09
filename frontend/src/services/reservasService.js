@@ -1,4 +1,17 @@
 // src/services/reservasService.js
+import { obterSessao } from "./authService";
+import {
+  atualizarStatusReserva,
+  atualizarStatusReservaSistema,
+  buscarReservasDoProprietario,
+  buscarReservasPorUsuario,
+} from "../mocks/reservas";
+
+const STATUS_CANCELAVEIS = ["pendente", "confirmada"];
+
+export function podeCancelarReserva(status) {
+  return STATUS_CANCELAVEIS.includes(status);
+}
 
 export async function criarReserva(dadosReserva) {
   const res = await fetch("/api/reservas", {
@@ -22,3 +35,143 @@ export async function getReservaPorId(id) {
   if (!res.ok) throw new Error("Reserva não encontrada");
   return res.json();
 }
+
+// O back-end ainda não expõe um endpoint de listagem de reservas por
+// usuário — mantido como mock até essa rota existir. A implementação
+// simula o comportamento assíncrono de uma chamada real para já testarmos
+// os estados de loading da tela.
+export async function getReservasDoUsuario() {
+  const sessao = obterSessao();
+
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(sessao ? buscarReservasPorUsuario(sessao.id) : []);
+    }, 400);
+  });
+}
+
+// O back-end ainda não expõe um endpoint de cancelamento de reserva —
+// mantido como mock até essa rota existir.
+export async function cancelarReserva(id) {
+  const sessao = obterSessao();
+
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      const reserva = sessao
+        ? buscarReservasPorUsuario(sessao.id).find((item) => item.id === id)
+        : null;
+
+      if (!reserva) {
+        reject(new Error("Reserva não encontrada."));
+        return;
+      }
+
+      if (!podeCancelarReserva(reserva.status)) {
+        reject(new Error("Esta reserva não pode mais ser cancelada."));
+        return;
+      }
+
+      resolve(atualizarStatusReserva(sessao.id, id, "cancelada"));
+    }, 400);
+  });
+}
+
+// O back-end ainda não expõe um endpoint de listagem de reservas por
+// proprietário — mantido como mock (ver reservasRoutes.js) até essa rota
+// existir. Ver mocks/reservas.js sobre por que essa listagem usa um
+// dataset separado do de "minhas reservas" do cliente.
+export async function getReservasDoProprietario() {
+  const sessao = obterSessao();
+
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(sessao ? buscarReservasDoProprietario(sessao.id) : []);
+    }, 400);
+  });
+}
+
+// Endpoint futuro mencionado no roadmap (PATCH /reservas/:id/status) ainda
+// não existe no back-end — as três ações abaixo permanecem mockadas.
+export async function aprovarReserva(id) {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      const sessao = obterSessao();
+      const reserva = sessao
+        ? buscarReservasDoProprietario(sessao.id).find((item) => item.id === id)
+        : null;
+
+      if (!reserva) {
+        reject(new Error("Reserva não encontrada."));
+        return;
+      }
+
+      if (reserva.status !== "pendente") {
+        reject(new Error("Esta reserva não pode mais ser aprovada."));
+        return;
+      }
+
+      resolve(atualizarStatusReservaSistema(id, "confirmada"));
+    }, 400);
+  });
+}
+
+export async function recusarReserva(id) {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      const sessao = obterSessao();
+      const reserva = sessao
+        ? buscarReservasDoProprietario(sessao.id).find((item) => item.id === id)
+        : null;
+
+      if (!reserva) {
+        reject(new Error("Reserva não encontrada."));
+        return;
+      }
+
+      if (reserva.status !== "pendente") {
+        reject(new Error("Esta reserva não pode mais ser recusada."));
+        return;
+      }
+
+      resolve(atualizarStatusReservaSistema(id, "recusada"));
+    }, 400);
+  });
+}
+
+export async function cancelarReservaProprietario(id) {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      const sessao = obterSessao();
+      const reserva = sessao
+        ? buscarReservasDoProprietario(sessao.id).find((item) => item.id === id)
+        : null;
+
+      if (!reserva) {
+        reject(new Error("Reserva não encontrada."));
+        return;
+      }
+
+      if (!podeCancelarReserva(reserva.status)) {
+        reject(new Error("Esta reserva não pode mais ser cancelada."));
+        return;
+      }
+
+      resolve(atualizarStatusReservaSistema(id, "cancelada"));
+    }, 400);
+  });
+}
+
+// Quando o Pedro entregar as rotas, este arquivo troca as duas funções
+// acima por algo como:
+//
+// export async function getReservasDoUsuario() {
+//   const res = await fetch("/api/reservas/minhas");
+//   if (!res.ok) throw new Error("Não foi possível carregar suas reservas.");
+//   return res.json();
+// }
+//
+// export async function cancelarReserva(id) {
+//   const res = await fetch(`/api/reservas/${id}/cancelar`, { method: "PATCH" });
+//   if (!res.ok) throw new Error("Não foi possível cancelar esta reserva.");
+//   return res.json();
+// }
