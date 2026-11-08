@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://SUBSTITUA-PELA-URL-DO-BACKEND.onrender.com/api/:path*"
+      "destination": "https://minhadata-backend.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
