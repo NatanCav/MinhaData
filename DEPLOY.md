@@ -103,6 +103,19 @@ Caso prefira configurar manualmente (sem blueprint): New → Web Service → apo
 5. Deploy. Anote a URL gerada (ex.: `https://minhadata.vercel.app`).
 6. Volte ao Render e atualize a variável `CORS_ORIGIN` do backend para essa URL exata (sem barra no final), depois faça um redeploy manual do backend para a variável ter efeito.
 
+## 7.1. Promover a conta de proprietário
+
+O produto tem um **único proprietário** (ver `CLAUDE.md`). Por segurança, o cadastro público (`/cadastro`) sempre cria contas com papel `CLIENTE` — não existe nenhuma forma de "virar proprietário" pela própria interface, de propósito.
+
+Para ativar a conta de proprietário:
+
+1. Cadastre-se normalmente pelo site publicado, com o e-mail que você vai usar como dono do negócio.
+2. No **Neon → SQL Editor**, rode (trocando o e-mail):
+   ```sql
+   UPDATE "User" SET role = 'PROPRIETARIO' WHERE email = 'seu-email@exemplo.com';
+   ```
+3. Faça logout e login novamente no site (o campo `role` vem no `/api/auth/login`/`/api/auth/me` — uma sessão já aberta não atualiza sozinha). Depois disso, `/gestao` fica acessível e os botões "Cadastrar espaço"/"Editar" em `/gestao/espacos` passam a gravar de verdade no banco (`POST`/`PUT /api/espacos`, protegidos por autenticação + papel de proprietário).
+
 ## 8. Configurar a URL da API e o CORS
 
 - A "URL da API" em produção **não** é configurada no código do frontend — ela vive só em `frontend/vercel.json` (`destination` do rewrite de `/api/:path*`).

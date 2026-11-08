@@ -13,6 +13,11 @@ enum TipoConta {
   PJ
 }
 
+enum Role {
+  CLIENTE
+  PROPRIETARIO
+}
+
 model User {
   id        Int       @id @default(autoincrement())
   nome      String
@@ -22,6 +27,7 @@ model User {
   telefone  String?
   telefoneVerificado Boolean @default(false)
   tipoConta TipoConta @default(PF)
+  role      Role      @default(CLIENTE)
 
   doisFatoresAtivo         Boolean @default(false)
   doisFatoresSecret        String?

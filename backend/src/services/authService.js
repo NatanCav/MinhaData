@@ -27,6 +27,7 @@ function paraApi(usuario) {
     telefone: usuario.telefone,
     telefoneVerificado: usuario.telefoneVerificado,
     tipoConta: usuario.tipoConta,
+    role: usuario.role === "PROPRIETARIO" ? "proprietario" : "cliente",
     doisFatoresAtivo: usuario.doisFatoresAtivo,
     precisaConfigurarDoisFatores: usuario.tipoConta === "PJ" && !usuario.doisFatoresAtivo,
   };

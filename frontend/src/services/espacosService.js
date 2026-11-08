@@ -1,11 +1,4 @@
 // src/services/espacosService.js
-import { obterSessao } from "./authService";
-import {
-  atualizarEspacoMock,
-  buscarEspacoDoProprietarioPorSlug,
-  criarEspacoMock,
-  listarEspacosDoProprietario,
-} from "../mocks/espacos";
 
 export async function getEspacos() {
   const res = await fetch("/api/espacos");
@@ -19,38 +12,45 @@ export async function getEspacoPorSlug(slug) {
   return res.json();
 }
 
-// O back-end ainda não expõe criação/edição de espaço (POST/PUT em
-// /api/espacos — ver backend/src/routes/espacosRoutes.js), então essas
-// funções mesclam a listagem real (fetch) com um mock em memória para o
-// painel de gestão do proprietário (ver mocks/espacos.js).
+// Produto tem um único proprietário — todos os espaços da API são "dele".
 export async function getEspacosDoProprietario() {
-  const sessao = obterSessao();
-  const espacosReais = await getEspacos();
-  const espacos = listarEspacosDoProprietario(espacosReais);
-  return sessao
-    ? espacos.filter((espaco) => espaco.proprietarioId === sessao.id)
-    : [];
+  return getEspacos();
 }
 
 export async function getEspacoDoProprietarioPorSlug(slug) {
-  const sessao = obterSessao();
-  const espacosReais = await getEspacos();
-  const espaco = buscarEspacoDoProprietarioPorSlug(slug, espacosReais);
-  if (!espaco || !sessao || espaco.proprietarioId !== sessao.id) {
-    throw new Error("Espaço não encontrado.");
-  }
-  return espaco;
+  return getEspacoPorSlug(slug);
 }
 
 export async function criarEspaco(dados) {
-  const espacosReais = await getEspacos();
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(criarEspacoMock(dados, espacosReais)), 500);
+  const res = await fetch("/api/espacos", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(dados),
   });
+
+  const corpo = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    throw new Error(corpo?.mensagem || "Não foi possível cadastrar o espaço.");
+  }
+
+  return corpo;
 }
 
 export async function atualizarEspaco(slug, dados) {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(atualizarEspacoMock(slug, dados)), 500);
+  const res = await fetch(`/api/espacos/${slug}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(dados),
   });
+
+  const corpo = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    throw new Error(corpo?.mensagem || "Não foi possível atualizar o espaço.");
+  }
+
+  return corpo;
 }

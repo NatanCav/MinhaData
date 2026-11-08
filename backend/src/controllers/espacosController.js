@@ -17,3 +17,21 @@ export async function obterPorSlug(req, res, next) {
     next(erro);
   }
 }
+
+export async function criar(req, res, next) {
+  try {
+    const espaco = await espacosService.criarEspaco(req.body ?? {});
+    res.status(201).json(espaco);
+  } catch (erro) {
+    next(erro);
+  }
+}
+
+export async function atualizar(req, res, next) {
+  try {
+    const espaco = await espacosService.atualizarEspaco(req.params.slug, req.body ?? {});
+    res.json(espaco);
+  } catch (erro) {
+    next(erro);
+  }
+}
