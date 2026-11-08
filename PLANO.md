@@ -1,0 +1,240 @@
+# PLANO.md — MinhaData
+
+Plano de desenvolvimento das funcionalidades restantes. Uma etapa por vez, com aprovação explícita antes de avançar para a próxima.
+
+## Contexto do produto
+
+Uso inicial: gerenciar um único espaço de lazer da família (piscina, churrasqueira, cozinha equipada, mesa de sinuca, dois banheiros, garagem). Possível evolução futura para SaaS multiempresa — ver seção "Considerações para o futuro SaaS" no fim deste documento. Nenhuma etapa abaixo implementa arquitetura multiempresa; o objetivo agora é fechar as funcionalidades de uso single-tenant sem fechar portas para essa evolução.
+
+## Diagnóstico (estado em 2026-11-08)
+
+### Stack
+- Backend: Node.js + Express + Prisma ORM + PostgreSQL (Neon em produção).
+- Frontend: React 19 + Vite 8 + Tailwind CSS v4.
+- Hospedagem: Vercel (frontend, com proxy `/api/*` para o backend) + Render (backend, free tier) + Neon (banco, free tier) + Cloudinary (imagens, free tier).
+- Autenticação: JWT em cookies `httpOnly`, 2FA via TOTP (`otplib`), obrigatório para contas PJ.
+
+### Funcionalidades reais e funcionando
+- Cadastro, login, 2FA, recuperação de senha, verificação de celular (lógica completa; só a *entrega* de e-mail/SMS é mock — ver abaixo).
+- Papel de usuário (`CLIENTE`/`PROPRIETARIO`), único proprietário por design atual.
+- CRUD de espaços (criar/editar) protegido por papel, com upload de imagem de capa e galeria via Cloudinary.
+- Criação de reserva (`POST /api/reservas`) com validação de CPF, conflito de horário e exigência de 2FA para PJ.
+
+### Funcionalidade com UI pronta mas dados mockados (achado principal)
+`PainelReservas.jsx` (proprietário) e `MinhasReservas.jsx` (cliente) estão com toda a interface implementada — filtros, estados de carregamento/erro, ações de aprovar/recusar/cancelar — mas consomem `frontend/src/mocks/reservas.js` (dados em memória, não persistidos). O backend (`backend/src/routes/reservasRoutes.js`) só expõe:
+- `POST /api/reservas` (criar)
+- `GET /api/reservas/:id` (buscar uma)
+
+Não existe: listagem por usuário, listagem por proprietário, nem endpoint de mudança de status (aprovar/recusar/cancelar).
+
+### Outros gaps identificados
+- `backend/src/services/emailService.js` e `smsService.js` só fazem `console.log` — nenhuma mensagem real é enviada.
+- WhatsApp (mencionado no README como objetivo do produto) nunca foi implementado.
+- Não há endpoint nem UI para excluir um espaço (só criar/editar/marcar indisponível).
+- Campos `comodidades` e `informacoes` existem no schema (`Espaco.comodidades`, `Espaco.informacoes`) e já têm rota de criação/edição no backend, mas o formulário do painel (`PainelEspacoForm.jsx`) não os expõe — hoje só é possível cadastrá-los manualmente via SQL.
+- Nenhum teste automatizado no projeto (frontend ou backend).
+
+### Problemas de qualidade (baixo risco, não bloqueiam uso)
+- `cpfValido`/`normalizarCpf` duplicados entre `backend/src/lib/cpf.js` e `frontend/src/pages/ConfirmarReserva/ConfirmarReserva.jsx` — duplicação aceitável entre runtimes separados sem um pacote compartilhado; mencionado para referência futura, não é uma etapa deste plano.
+- Em `PainelEspacoForm.jsx`, o toast de sucesso é disparado e a tela navega para `/gestao/espacos` quase imediatamente — na prática o toast quase não aparece. Cosmético.
+- `npm audit` no backend reporta vulnerabilidades que só seriam corrigidas com upgrade maior do Prisma (v6→v8-rc) ou ESLint (v10→v11) — avaliado e deixado de lado até agora por ser mudança de major version fora do escopo das tarefas anteriores.
+- Sem CI configurado (sem `.github/workflows`).
+
+### O que falta para "produção" no sentido de uso real pela família
+Só a Etapa 1+2 abaixo (reservas reais). O resto do checklist técnico de hospedagem (deploy, HTTPS, variáveis de ambiente, banco persistente) já está resolvido.
+
+---
+
+## Etapas
+
+Status: `[ ]` pendente · `[~]` em andamento · `[x]` concluída
+
+### Etapa 1 — Backend: endpoints reais de gestão de reservas
+**Status:** [ ]
+
+**Objetivo:** substituir os pontos cegos do backend de reservas por endpoints reais, com autorização correta por papel.
+
+**O que entra:**
+- `GET /api/reservas` — lista todas as reservas (protegido, só `PROPRIETARIO`; como o produto tem dono único, "todas as reservas" = reservas do negócio).
+- `GET /api/reservas/minhas` — lista as reservas do usuário autenticado (protegido, qualquer usuário logado).
+- `PATCH /api/reservas/:id/status` — muda o status de uma reserva, com autorização diferenciada:
+  - `PROPRIETARIO`: pode mudar para `confirmada`, `recusada` (só a partir de `pendente`) ou `cancelada` (a partir de `pendente`/`confirmada`).
+  - Cliente dono da reserva: só pode mudar para `cancelada`, e só a partir de `pendente`/`confirmada`.
+  - Qualquer outra combinação retorna `403`.
+
+**Arquivos afetados:**
+- `backend/src/routes/reservasRoutes.js`
+- `backend/src/controllers/reservasController.js`
+- `backend/src/services/reservasService.js`
+
+**Dependências:** nenhuma — build em cima do que já existe.
+
+**Critério de conclusão:** os três endpoints respondem corretamente via `curl` autenticado (proprietário e cliente), respeitando as regras de transição de status e autorização; `npm run lint` limpo no backend.
+
+**Testes necessários:** testes manuais via `curl`/script cobrindo: listagem como proprietário, listagem "minhas" como cliente, aprovar/recusar como proprietário, cancelar como cliente dono, tentativa de cancelar reserva de outro cliente (deve falhar), tentativa de cliente aprovar (deve falhar).
+
+---
+
+### Etapa 2 — Frontend: conectar Painel de Reservas e Minhas Reservas à API real
+**Status:** [ ]
+
+**Objetivo:** trocar os mocks pelos endpoints da Etapa 1, sem alterar a UI já existente (que já está pronta para esse contrato).
+
+**O que entra:**
+- `frontend/src/services/reservasService.js`: substituir `getReservasDoProprietario`, `getReservasDoUsuario`, `aprovarReserva`, `recusarReserva`, `cancelarReservaProprietario`, `cancelarReserva` por chamadas `fetch` reais.
+- Remover a dependência de `frontend/src/mocks/reservas.js` e, por consequência, de `frontend/src/mocks/proprietario.js` (verificar se fica totalmente órfão).
+- Atualizar `Painel.jsx` (dashboard) — já consome `getReservasDoProprietario`, só precisa que a função passe a retornar dados reais.
+
+**Arquivos afetados:**
+- `frontend/src/services/reservasService.js`
+- `frontend/src/mocks/reservas.js` (remoção)
+- `frontend/src/mocks/proprietario.js` (remoção, se órfão)
+
+**Dependências:** Etapa 1 concluída.
+
+**Critério de conclusão:** `npm run build` e `npm run lint` limpos no frontend; fluxo completo testado manualmente no site publicado (criar reserva como cliente → aparece no painel do proprietário → aprovar/recusar → reflete em "Minhas Reservas" do cliente → cancelar).
+
+**Testes necessários:** teste manual ponta a ponta no ambiente de produção (igual ao que fizemos para espaços), com limpeza dos dados de teste depois.
+
+---
+
+### Etapa 3 — Testes automatizados básicos
+**Status:** [ ]
+
+**Objetivo:** estabelecer um mínimo de rede de segurança para as regras de negócio mais sensíveis, já que hoje não existe nenhum teste automatizado.
+
+**O que entra:**
+- Configurar `vitest` no backend (mais leve que Jest, já usado em projetos Vite).
+- Testes unitários para: validação de CPF (`lib/cpf.js`), geração de slug (`espacosService.js`), detecção de conflito de horário (`reservasService.js`), regras de transição de status da Etapa 1.
+- Script `npm test` no `backend/package.json`.
+
+**Arquivos afetados:**
+- `backend/package.json`
+- Novos arquivos `*.test.js` ao lado dos módulos testados (ou pasta `backend/src/**/__tests__/`, a definir na execução).
+
+**Dependências:** Etapa 1 concluída (para testar as regras de status).
+
+**Critério de conclusão:** `npm test` roda e passa no backend; cobre pelo menos os quatro módulos listados.
+
+**Testes necessários:** os próprios testes automatizados criados nesta etapa.
+
+---
+
+### Etapa 4 — Comodidades e informações do espaço no formulário
+**Status:** [ ]
+
+**Objetivo:** permitir cadastrar as comodidades reais do espaço (piscina, churrasqueira, cozinha equipada, sinuca, banheiros, garagem) e as informações/regras pela própria interface, sem precisar de SQL manual.
+
+**O que entra:**
+- Backend: `criarEspaco`/`atualizarEspaco` em `espacosService.js` passam a aceitar e persistir `comodidades` (lista de `{id, label}`) e `informacoes` (lista de textos) vindos do `dados` — hoje ficam sempre vazios independente do que é enviado.
+- Frontend: `PainelEspacoForm.jsx` ganha duas seções de lista editável (adicionar/remover) para esses dois campos.
+
+**Arquivos afetados:**
+- `backend/src/services/espacosService.js`
+- `frontend/src/pages/PainelEspacoForm/PainelEspacoForm.jsx`
+- Possível novo componente `frontend/src/components/ui/ListaEditavel.jsx` (reutilizável para os dois campos).
+
+**Dependências:** nenhuma.
+
+**Critério de conclusão:** cadastrar/editar um espaço com comodidades e informações reais, confirmar que aparecem corretamente na página pública de detalhe do espaço (`DetalheEspaco.jsx`).
+
+**Testes necessários:** teste manual no site publicado.
+
+---
+
+### Etapa 5 — Excluir espaço
+**Status:** [ ]
+
+**Objetivo:** permitir remover um espaço cadastrado incorretamente, com proteção para não quebrar o histórico de reservas.
+
+**O que entra:**
+- Backend: `DELETE /api/espacos/:slug` (protegido, só proprietário). Bloqueia a exclusão com erro amigável se existirem reservas associadas (sugerindo marcar como "Indisponível" em vez de excluir) — evita violar a constraint de chave estrangeira e preserva histórico.
+- Frontend: botão "Excluir" em `PainelEspacos.jsx` com confirmação.
+
+**Arquivos afetados:**
+- `backend/src/routes/espacosRoutes.js`, `espacosController.js`, `espacosService.js`
+- `frontend/src/pages/PainelEspacos/PainelEspacos.jsx`
+- `frontend/src/services/espacosService.js`
+
+**Dependências:** nenhuma.
+
+**Critério de conclusão:** excluir um espaço sem reservas funciona; tentar excluir um espaço com reservas retorna erro claro e não apaga nada.
+
+**Testes necessários:** teste manual cobrindo os dois cenários.
+
+---
+
+### Etapa 6 — E-mail transacional real
+**Status:** [ ]
+
+**Objetivo:** recuperação de senha e notificações de status de reserva passam a ser entregues de verdade.
+
+**O que entra:**
+- Escolher provedor (sugestão: Resend — free tier generoso, API simples, sem necessidade de servidor SMTP próprio).
+- `backend/src/services/emailService.js`: substituir o `console.log` pela chamada real à API do provedor.
+- Disparar e-mail de notificação quando o proprietário aprova/recusa/cancela uma reserva (usa a infraestrutura da Etapa 1).
+
+**Arquivos afetados:**
+- `backend/src/services/emailService.js`
+- `backend/.env.example`, `render.yaml` (nova variável de API key)
+- `backend/src/services/reservasService.js` (chamada ao enviar e-mail nas mudanças de status)
+
+**Dependências:** Etapa 1 concluída (para notificar mudança de status). Depende de você criar a conta no provedor escolhido.
+
+**Critério de conclusão:** e-mail de recuperação de senha chega de verdade na caixa de entrada; e-mail de mudança de status de reserva também.
+
+**Testes necessários:** teste manual com e-mail real.
+
+---
+
+### Etapa 7 — SMS real para verificação de celular (opcional)
+**Status:** [ ]
+
+**Objetivo:** envio real do código de verificação de telefone.
+
+**Observação importante:** diferente de e-mail, a maioria dos provedores de SMS (Twilio, Zenvia) não tem um free tier realmente gratuito e contínuo — geralmente é crédito de teste que acaba. Antes de implementar, vale decidir se isso é essencial agora ou se pode esperar (a verificação de telefone não bloqueia nenhum fluxo crítico hoje).
+
+**Arquivos afetados:** `backend/src/services/smsService.js`, variáveis de ambiente.
+
+**Dependências:** nenhuma. Depende de escolha e criação de conta no provedor.
+
+**Critério de conclusão:** código de verificação chega por SMS de verdade.
+
+---
+
+### Etapa 8 — WhatsApp (confirmação e lembrete de reserva)
+**Status:** [ ]
+
+**Objetivo:** cumprir a proposta de valor original do produto (mencionada no README) — confirmação e lembrete de reserva via WhatsApp.
+
+**Observação importante:** a biblioteca não-oficial `whatsapp-web.js` (cogitada originalmente) exige uma sessão de navegador (Puppeteer) sempre ativa com login por QR code — incompatível com o Render free tier, que hiberna o serviço por inatividade e perderia a sessão repetidamente. A alternativa viável nesse tipo de hospedagem é a **API oficial do WhatsApp Business (Meta Cloud API)**, que tem free tier (conversas gratuitas por mês) mas exige: conta Meta Business, verificação de número, e aprovação prévia de modelos de mensagem (template messages) para contato iniciado pela empresa.
+
+Essa é a etapa mais complexa e com mais dependência de processos externos (aprovação da Meta pode levar dias). Recomendo deixá-la por último e reavaliar se vale a pena nesse momento ou se o contato manual (telefone/WhatsApp pessoal) é suficiente para o uso atual com a família.
+
+**Dependências:** Etapa 1 concluída (gatilhos de notificação). Depende de você criar e verificar a conta Meta Business.
+
+---
+
+### Etapa 9 — Polimento
+**Status:** [ ]
+
+**Objetivo:** fechar os itens de qualidade identificados no diagnóstico que não justificam uma etapa própria.
+
+**O que entra:**
+- Corrigir o toast de sucesso em `PainelEspacoForm.jsx` que some antes de aparecer (pequeno delay antes do `navigate`, ou mover o toast para a tela de destino).
+- Reavaliar `npm audit` do backend — decidir se vale fazer o upgrade maior do Prisma/ESLint agora ou manter como débito técnico registrado.
+
+**Dependências:** nenhuma — pode ser feita a qualquer momento, inclusive em paralelo.
+
+---
+
+## Considerações para o futuro SaaS (não implementar agora)
+
+Quando fizer sentido evoluir para múltiplos proprietários, os pontos de maior impacto arquitetural serão:
+
+- `Espaco` precisará de uma relação com o proprietário (`ownerId` ou um modelo `Empresa`/`Tenant` separado) — hoje não existe porque o produto assume dono único.
+- Toda consulta que hoje lista "todos os espaços" ou "todas as reservas" (porque há um dono só) precisará ser filtrada por proprietário/tenant.
+- O cadastro de conta precisará de um fluxo de onboarding para novos proprietários (hoje a promoção a `PROPRIETARIO` é manual, via SQL, de propósito — não é um fluxo que escale para múltiplos donos).
+- Cobrança/planos, se o SaaS for pago.
+
+Nenhuma dessas mudanças é necessária para as etapas 1–9 acima, e nenhuma delas foi antecipada no código atual de forma que dificulte essa migração depois.
