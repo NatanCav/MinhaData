@@ -256,8 +256,12 @@ export async function atualizarStatusReserva(usuarioId, id, novoStatus) {
     throw new AppError("Você não tem permissão para alterar esta reserva.", 403);
   }
 
+  if (!(novoStatus in transicoesPermitidas)) {
+    throw new AppError("Você não tem permissão para alterar esta reserva para este status.", 403);
+  }
+
   const origensPermitidas = transicoesPermitidas[novoStatus];
-  if (!origensPermitidas || !origensPermitidas.includes(reserva.status)) {
+  if (!origensPermitidas.includes(reserva.status)) {
     throw new AppError(
       "Esta alteração de status não é permitida para o estado atual da reserva.",
       409
