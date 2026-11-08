@@ -11,7 +11,38 @@ export async function criar(req, res, next) {
 
 export async function obterPorId(req, res, next) {
   try {
-    const reserva = await reservasService.buscarReservaPorId(req.params.id);
+    const reserva = await reservasService.buscarReservaPorId(req.params.id, req.usuarioId);
+    res.json(reserva);
+  } catch (erro) {
+    next(erro);
+  }
+}
+
+export async function listarTodas(_req, res, next) {
+  try {
+    const reservas = await reservasService.listarTodasReservas();
+    res.json(reservas);
+  } catch (erro) {
+    next(erro);
+  }
+}
+
+export async function listarMinhas(req, res, next) {
+  try {
+    const reservas = await reservasService.listarReservasDoUsuario(req.usuarioId);
+    res.json(reservas);
+  } catch (erro) {
+    next(erro);
+  }
+}
+
+export async function atualizarStatus(req, res, next) {
+  try {
+    const reserva = await reservasService.atualizarStatusReserva(
+      req.usuarioId,
+      req.params.id,
+      req.body?.status
+    );
     res.json(reserva);
   } catch (erro) {
     next(erro);

@@ -1,10 +1,13 @@
 import { Router } from "express";
 import * as reservasController from "../controllers/reservasController.js";
-import { autenticar } from "../middlewares/autenticacao.js";
+import { autenticar, exigirProprietario } from "../middlewares/autenticacao.js";
 
 const router = Router();
 
+router.get("/", autenticar, exigirProprietario, reservasController.listarTodas);
+router.get("/minhas", autenticar, reservasController.listarMinhas);
 router.post("/", autenticar, reservasController.criar);
-router.get("/:id", reservasController.obterPorId);
+router.get("/:id", autenticar, reservasController.obterPorId);
+router.patch("/:id/status", autenticar, reservasController.atualizarStatus);
 
 export default router;

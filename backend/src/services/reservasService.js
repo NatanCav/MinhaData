@@ -168,7 +168,15 @@ export async function criarReserva(userId, payload) {
   return paraApi(reserva);
 }
 
-export async function buscarReservaPorId(id) {
+async function ehProprietario(usuarioId) {
+  const usuario = await prisma.user.findUnique({
+    where: { id: usuarioId },
+    select: { role: true },
+  });
+  return usuario?.role === "PROPRIETARIO";
+}
+
+export async function buscarReservaPorId(id, usuarioId) {
   const idNumerico = Number(id);
   if (!Number.isInteger(idNumerico)) {
     throw new AppError("Identificador de reserva inválido.");
@@ -183,5 +191,84 @@ export async function buscarReservaPorId(id) {
     throw new AppError("Reserva não encontrada.", 404);
   }
 
+  if (reserva.userId !== usuarioId && !(await ehProprietario(usuarioId))) {
+    throw new AppError("Você não tem permissão para ver esta reserva.", 403);
+  }
+
   return paraApi(reserva);
+}
+
+export async function listarTodasReservas() {
+  const reservas = await prisma.reserva.findMany({
+    include: { espaco: true },
+    orderBy: { createdAt: "desc" },
+  });
+  return reservas.map(paraApi);
+}
+
+export async function listarReservasDoUsuario(usuarioId) {
+  const reservas = await prisma.reserva.findMany({
+    where: { userId: usuarioId },
+    include: { espaco: true },
+    orderBy: { createdAt: "desc" },
+  });
+  return reservas.map(paraApi);
+}
+
+const STATUS_VALIDOS = ["pendente", "confirmada", "recusada", "cancelada"];
+
+// Mapa: novo status -> lista de status de origem a partir dos quais essa
+// transição é permitida para cada papel.
+const TRANSICOES_PROPRIETARIO = {
+  confirmada: ["pendente"],
+  recusada: ["pendente"],
+  cancelada: ["pendente", "confirmada"],
+};
+
+const TRANSICOES_CLIENTE = {
+  cancelada: ["pendente", "confirmada"],
+};
+
+export async function atualizarStatusReserva(usuarioId, id, novoStatus) {
+  if (!STATUS_VALIDOS.includes(novoStatus)) {
+    throw new AppError("Status inválido.");
+  }
+
+  const idNumerico = Number(id);
+  if (!Number.isInteger(idNumerico)) {
+    throw new AppError("Identificador de reserva inválido.");
+  }
+
+  const reserva = await prisma.reserva.findUnique({ where: { id: idNumerico } });
+  if (!reserva) {
+    throw new AppError("Reserva não encontrada.", 404);
+  }
+
+  const proprietario = await ehProprietario(usuarioId);
+  const donoDaReserva = reserva.userId === usuarioId;
+
+  let transicoesPermitidas;
+  if (proprietario) {
+    transicoesPermitidas = TRANSICOES_PROPRIETARIO;
+  } else if (donoDaReserva) {
+    transicoesPermitidas = TRANSICOES_CLIENTE;
+  } else {
+    throw new AppError("Você não tem permissão para alterar esta reserva.", 403);
+  }
+
+  const origensPermitidas = transicoesPermitidas[novoStatus];
+  if (!origensPermitidas || !origensPermitidas.includes(reserva.status)) {
+    throw new AppError(
+      "Esta alteração de status não é permitida para o estado atual da reserva.",
+      409
+    );
+  }
+
+  const reservaAtualizada = await prisma.reserva.update({
+    where: { id: idNumerico },
+    data: { status: novoStatus },
+    include: { espaco: true },
+  });
+
+  return paraApi(reservaAtualizada);
 }
