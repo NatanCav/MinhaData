@@ -81,7 +81,7 @@ Status: `[ ]` pendente · `[~]` em andamento · `[x]` concluída
 ---
 
 ### Etapa 2 — Frontend: conectar Painel de Reservas e Minhas Reservas à API real
-**Status:** [ ]
+**Status:** [x] Concluída em 2026-11-08
 
 **Objetivo:** trocar os mocks pelos endpoints da Etapa 1, sem alterar a UI já existente (que já está pronta para esse contrato).
 
@@ -100,6 +100,11 @@ Status: `[ ]` pendente · `[~]` em andamento · `[x]` concluída
 **Critério de conclusão:** `npm run build` e `npm run lint` limpos no frontend; fluxo completo testado manualmente no site publicado (criar reserva como cliente → aparece no painel do proprietário → aprovar/recusar → reflete em "Minhas Reservas" do cliente → cancelar).
 
 **Testes necessários:** teste manual ponta a ponta no ambiente de produção (igual ao que fizemos para espaços), com limpeza dos dados de teste depois.
+
+**Notas de execução:**
+- `mocks/reservas.js` e `mocks/proprietario.js` removidos (ficaram órfãos — nenhum outro arquivo os importava mais).
+- `Painel.jsx` não precisou de nenhuma alteração — já consumia `getReservasDoProprietario()`, só passou a receber dados reais.
+- Ciclo completo testado em produção (contas descartáveis): criar reserva → listar como proprietário → aprovar → refletir em "Minhas Reservas" do cliente → cancelar. Todos os passos bateram com o comportamento esperado da UI. Commit: `6ec7fa3`.
 
 ---
 
