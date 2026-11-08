@@ -50,7 +50,7 @@ Só a Etapa 1+2 abaixo (reservas reais). O resto do checklist técnico de hosped
 Status: `[ ]` pendente · `[~]` em andamento · `[x]` concluída
 
 ### Etapa 1 — Backend: endpoints reais de gestão de reservas
-**Status:** [ ]
+**Status:** [x] Concluída em 2026-11-08
 
 **Objetivo:** substituir os pontos cegos do backend de reservas por endpoints reais, com autorização correta por papel.
 
@@ -72,6 +72,11 @@ Status: `[ ]` pendente · `[~]` em andamento · `[x]` concluída
 **Critério de conclusão:** os três endpoints respondem corretamente via `curl` autenticado (proprietário e cliente), respeitando as regras de transição de status e autorização; `npm run lint` limpo no backend.
 
 **Testes necessários:** testes manuais via `curl`/script cobrindo: listagem como proprietário, listagem "minhas" como cliente, aprovar/recusar como proprietário, cancelar como cliente dono, tentativa de cancelar reserva de outro cliente (deve falhar), tentativa de cliente aprovar (deve falhar).
+
+**Notas de execução:**
+- Também protegida `GET /api/reservas/:id`, que antes era pública e expunha dados pessoais (nome, telefone, e-mail, CPF) de qualquer reserva para quem soubesse/adivinhasse o id — não estava descrito no plano original, mas é consistente com o objetivo de autorização da etapa e de baixo risco (a função não era usada em lugar nenhum do frontend).
+- Durante o teste em produção, encontrado e corrigido: cliente tentando mudar status para algo fora do seu escopo (ex.: aprovar a própria reserva) retornava `409` em vez de `403`. Corrigido para distinguir "sem permissão para esse tipo de ação" (403) de "transição inválida a partir do estado atual" (409).
+- 9 cenários de autorização testados manualmente em produção (contas descartáveis, removidas depois): todos passaram. Commits: `5cc2acd` (feat), `135d6a0` (fix).
 
 ---
 
