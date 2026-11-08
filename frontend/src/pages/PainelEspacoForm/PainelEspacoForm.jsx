@@ -9,11 +9,13 @@ import Button from "../../components/ui/Button";
 import Skeleton from "../../components/ui/Skeleton";
 import EmptyState from "../../components/ui/EmptyState";
 import Toast from "../../components/ui/Toast";
+import ImagemUpload from "../../components/ui/ImagemUpload";
 import { useToast } from "../../hooks/useToast";
 import {
   atualizarEspaco,
   criarEspaco,
   getEspacoDoProprietarioPorSlug,
+  uploadImagem,
 } from "../../services/espacosService";
 
 const FORMULARIO_INICIAL = {
@@ -25,6 +27,7 @@ const FORMULARIO_INICIAL = {
   unidadePreco: "dia",
   capacidade: "",
   imagemCapa: "",
+  galeria: [],
   disponivel: true,
 };
 
@@ -56,6 +59,7 @@ export default function PainelEspacoForm() {
           unidadePreco: espaco.unidadePreco,
           capacidade: String(espaco.capacidade),
           imagemCapa: espaco.imagemCapa || "",
+          galeria: Array.isArray(espaco.galeria) ? espaco.galeria : [],
           disponivel: espaco.disponivel,
         });
       })
@@ -66,6 +70,17 @@ export default function PainelEspacoForm() {
   function atualizarCampo(campo, valor) {
     setFormulario((atual) => ({ ...atual, [campo]: valor }));
     setErros((atual) => ({ ...atual, [campo]: null }));
+  }
+
+  function adicionarNaGaleria(url) {
+    setFormulario((atual) => ({ ...atual, galeria: [...atual.galeria, url] }));
+  }
+
+  function removerDaGaleria(indice) {
+    setFormulario((atual) => ({
+      ...atual,
+      galeria: atual.galeria.filter((_, i) => i !== indice),
+    }));
   }
 
   function validar() {
@@ -107,7 +122,8 @@ export default function PainelEspacoForm() {
       preco: Number(formulario.preco),
       unidadePreco: formulario.unidadePreco,
       capacidade: Number(formulario.capacidade),
-      imagemCapa: formulario.imagemCapa.trim() || undefined,
+      imagemCapa: formulario.imagemCapa || undefined,
+      galeria: formulario.galeria,
       disponivel: formulario.disponivel,
     };
 
@@ -232,13 +248,47 @@ export default function PainelEspacoForm() {
           />
         </div>
 
-        <Input
-          id="imagemCapa"
-          label="URL da imagem de capa"
-          placeholder="https://..."
-          value={formulario.imagemCapa}
-          onChange={(evento) => atualizarCampo("imagemCapa", evento.target.value)}
+        <ImagemUpload
+          label="Imagem de capa"
+          valor={formulario.imagemCapa}
+          onEnviar={async (arquivo) => {
+            const url = await uploadImagem(arquivo);
+            atualizarCampo("imagemCapa", url);
+          }}
         />
+
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium text-gray-700">Galeria de fotos</p>
+
+          {formulario.galeria.length > 0 && (
+            <div className="flex flex-wrap gap-3">
+              {formulario.galeria.map((url, indice) => (
+                <div key={url} className="relative">
+                  <img
+                    src={url}
+                    alt=""
+                    className="h-24 w-24 rounded-lg border border-gray-200 object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removerDaGaleria(indice)}
+                    aria-label="Remover imagem da galeria"
+                    className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-white text-red-500 shadow-sm hover:bg-red-50"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <ImagemUpload
+            onEnviar={async (arquivo) => {
+              const url = await uploadImagem(arquivo);
+              adicionarNaGaleria(url);
+            }}
+          />
+        </div>
 
         <Select
           id="disponivel"

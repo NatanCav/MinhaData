@@ -114,6 +114,7 @@ export async function criarEspaco(dados) {
       unidadePreco: dados.unidadePreco,
       capacidade: Number(dados.capacidade),
       imagemCapa: dados.imagemCapa || null,
+      galeria: Array.isArray(dados.galeria) ? dados.galeria : [],
       disponivel: dados.disponivel ?? true,
     },
   });
@@ -136,6 +137,7 @@ export async function atualizarEspaco(slug, dados) {
       unidadePreco: dados.unidadePreco,
       capacidade: Number(dados.capacidade),
       imagemCapa: dados.imagemCapa || null,
+      galeria: Array.isArray(dados.galeria) ? dados.galeria : [],
       disponivel: dados.disponivel ?? true,
     },
   });

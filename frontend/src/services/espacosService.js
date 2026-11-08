@@ -38,6 +38,25 @@ export async function criarEspaco(dados) {
   return corpo;
 }
 
+export async function uploadImagem(arquivo) {
+  const formData = new FormData();
+  formData.append("imagem", arquivo);
+
+  const res = await fetch("/api/uploads", {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+
+  const corpo = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    throw new Error(corpo?.mensagem || "Não foi possível enviar a imagem.");
+  }
+
+  return corpo.url;
+}
+
 export async function atualizarEspaco(slug, dados) {
   const res = await fetch(`/api/espacos/${slug}`, {
     method: "PUT",
