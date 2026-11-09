@@ -8,10 +8,8 @@ import Select from "../../components/ui/Select";
 import Button from "../../components/ui/Button";
 import Skeleton from "../../components/ui/Skeleton";
 import EmptyState from "../../components/ui/EmptyState";
-import Toast from "../../components/ui/Toast";
 import ImagemUpload from "../../components/ui/ImagemUpload";
 import ListaEditavel from "../../components/ui/ListaEditavel";
-import { useToast } from "../../hooks/useToast";
 import {
   atualizarEspaco,
   criarEspaco,
@@ -57,8 +55,6 @@ export default function PainelEspacoForm() {
   const [enviando, setEnviando] = useState(false);
   const [carregando, setCarregando] = useState(modoEdicao);
   const [erroCarregamento, setErroCarregamento] = useState(null);
-
-  const { toast, mostrarToast, fecharToast } = useToast();
 
   useEffect(() => {
     if (!modoEdicao) return;
@@ -177,12 +173,15 @@ export default function PainelEspacoForm() {
     try {
       if (modoEdicao) {
         await atualizarEspaco(slug, dados);
-        mostrarToast("Espaço atualizado com sucesso.", "sucesso");
+        navigate("/gestao/espacos", {
+          state: { mensagemSucesso: "Espaço atualizado com sucesso." },
+        });
       } else {
         await criarEspaco(dados);
-        mostrarToast("Espaço cadastrado com sucesso.", "sucesso");
+        navigate("/gestao/espacos", {
+          state: { mensagemSucesso: "Espaço cadastrado com sucesso." },
+        });
       }
-      navigate("/gestao/espacos");
     } catch (erro) {
       setErroEnvio(
         erro.message ||
@@ -378,13 +377,6 @@ export default function PainelEspacoForm() {
           </Button>
         </div>
       </Card>
-
-      <Toast
-        mensagem={toast.mensagem}
-        tom={toast.tom}
-        visivel={toast.visivel}
-        onFechar={fecharToast}
-      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import SectionTitle from "../../components/ui/SectionTitle";
 import Card from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
@@ -29,6 +29,8 @@ export default function PainelEspacos() {
   const [excluindoSlug, setExcluindoSlug] = useState(null);
 
   const { toast, mostrarToast, fecharToast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     getEspacosDoProprietario()
@@ -36,6 +38,13 @@ export default function PainelEspacos() {
       .catch(() => setErro("Não foi possível carregar os espaços."))
       .finally(() => setCarregando(false));
   }, []);
+
+  useEffect(() => {
+    if (!location.state?.mensagemSucesso) return;
+    mostrarToast(location.state.mensagemSucesso, "sucesso");
+    navigate(location.pathname, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- so deve rodar quando a tela e navegada com um state novo
+  }, [location.state]);
 
   async function handleExcluir(espaco) {
     const confirmado = window.confirm(
