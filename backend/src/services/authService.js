@@ -28,6 +28,7 @@ function paraApi(usuario) {
     telefoneVerificado: usuario.telefoneVerificado,
     tipoConta: usuario.tipoConta,
     role: usuario.role === "PROPRIETARIO" ? "proprietario" : "cliente",
+    whatsappContato: usuario.whatsappContato,
     doisFatoresAtivo: usuario.doisFatoresAtivo,
     precisaConfigurarDoisFatores: usuario.tipoConta === "PJ" && !usuario.doisFatoresAtivo,
   };

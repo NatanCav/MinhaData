@@ -10,6 +10,7 @@ import EmptyState from "../../components/ui/EmptyState";
 import ModalReservaSucesso from "../../components/ui/ModalReservaSucesso";
 import { IconeCalendario, IconeRelogio } from "../../components/ui/Icones";
 import { criarReserva } from "../../services/reservasService";
+import { getWhatsappContato } from "../../services/configService";
 
 const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -34,6 +35,12 @@ function cpfValido(cpf) {
   const digito2 = calcularDigitoVerificador(digitos.slice(0, 10));
 
   return digito1 === Number(digitos[9]) && digito2 === Number(digitos[10]);
+}
+
+function formatarNumeroWhatsapp(numero) {
+  const digitos = String(numero ?? "").replace(/\D/g, "");
+  if (digitos.startsWith("55") && digitos.length >= 12) return digitos;
+  return `55${digitos}`;
 }
 
 function formatarData(data) {
@@ -61,6 +68,7 @@ export default function ConfirmarReserva() {
   const [enviando, setEnviando] = useState(false);
   const [erroEnvio, setErroEnvio] = useState(null);
   const [reservaConfirmada, setReservaConfirmada] = useState(null);
+  const [linkWhatsapp, setLinkWhatsapp] = useState(null);
 
   if (!reserva) {
     return (
@@ -120,6 +128,16 @@ export default function ConfirmarReserva() {
       definirFormulario({ nome, telefone, email, cpf, observacoes });
       setReservaConfirmada(reservaCriada);
       setModalAberto(true);
+
+      const whatsappProprietario = await getWhatsappContato();
+      if (whatsappProprietario) {
+        const mensagem =
+          `Olá! Acabei de reservar o espaço *${espaco.nome}* ` +
+          `para o dia ${formatarData(data)} às ${reservaCriada.horarioInicio}. ` +
+          `Meu nome: ${nome}.`;
+        const numero = formatarNumeroWhatsapp(whatsappProprietario);
+        setLinkWhatsapp(`https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`);
+      }
     } catch (erro) {
       setErroEnvio(erro.message || "Não foi possível concluir a reserva.");
     } finally {
@@ -129,6 +147,7 @@ export default function ConfirmarReserva() {
 
   function handleFecharModal() {
     setModalAberto(false);
+    setLinkWhatsapp(null);
     limparReserva();
     navigate("/");
   }
@@ -291,6 +310,7 @@ export default function ConfirmarReserva() {
           data={reservaConfirmada.data}
           horario={horarioConfirmado}
           codigoReserva={reservaConfirmada.id}
+          linkWhatsapp={linkWhatsapp}
           onFechar={handleFecharModal}
         />
       )}

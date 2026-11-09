@@ -19,6 +19,7 @@ export default function ModalReservaSucesso({
   data,
   horario,
   codigoReserva,
+  linkWhatsapp,
   onFechar,
 }) {
   const [visivel, setVisivel] = useState(false);
@@ -105,7 +106,22 @@ export default function ModalReservaSucesso({
           )}
         </div>
 
-        <Button onClick={fechar} className="mt-6 w-full">
+        {linkWhatsapp && (
+          <a
+            href={linkWhatsapp}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+          >
+            Enviar confirmação pelo WhatsApp
+          </a>
+        )}
+
+        <Button
+          onClick={fechar}
+          variante={linkWhatsapp ? "secundario" : "primario"}
+          className="mt-3 w-full"
+        >
           Fechar
         </Button>
       </div>

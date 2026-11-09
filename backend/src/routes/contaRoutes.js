@@ -12,5 +12,6 @@ router.post("/2fa/confirmar", contaController.confirmarDoisFatores);
 router.post("/2fa/desativar", contaController.desativarDoisFatores);
 router.post("/telefone/solicitar-verificacao", contaController.solicitarVerificacaoTelefone);
 router.post("/telefone/confirmar", contaController.confirmarVerificacaoTelefone);
+router.patch("/whatsapp", contaController.atualizarWhatsapp);
 
 export default router;

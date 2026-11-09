@@ -195,3 +195,17 @@ export async function confirmarVerificacaoTelefone(userId, codigo) {
 
   return { mensagem: "Número de celular confirmado com sucesso." };
 }
+
+export async function atualizarWhatsappContato(userId, whatsapp) {
+  const digitos = String(whatsapp ?? "").replace(/\D/g, "");
+  if (!REGEX_TELEFONE.test(digitos)) {
+    throw new AppError("Informe um número de WhatsApp válido, com DDD.");
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { whatsappContato: digitos },
+  });
+
+  return { mensagem: "Número de WhatsApp atualizado com sucesso." };
+}

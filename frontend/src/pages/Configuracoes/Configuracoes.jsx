@@ -434,7 +434,58 @@ function SecaoTelefone() {
   );
 }
 
+function SecaoWhatsappContato() {
+  const { usuario, atualizarUsuario } = useAuth();
+  const [whatsapp, setWhatsapp] = useState(usuario.whatsappContato || "");
+  const [erro, setErro] = useState(null);
+  const [mensagem, setMensagem] = useState(null);
+  const [enviando, setEnviando] = useState(false);
+
+  async function handleSubmit(evento) {
+    evento.preventDefault();
+    setErro(null);
+    setMensagem(null);
+
+    setEnviando(true);
+    try {
+      const resultado = await contaService.atualizarWhatsapp(whatsapp);
+      setMensagem(resultado.mensagem);
+      atualizarUsuario({ whatsappContato: whatsapp.replace(/\D/g, "") });
+    } catch (erroRequisicao) {
+      setErro(erroRequisicao.message);
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <Card className="flex flex-col gap-4">
+      <SectionTitle subtitulo="Para onde o cliente envia a confirmação da reserva pelo WhatsApp, assim que reserva um espaço.">
+        WhatsApp para confirmação de reservas
+      </SectionTitle>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Input
+          id="whatsappContato"
+          label="Número de WhatsApp (com DDD)"
+          type="tel"
+          placeholder="11999999999"
+          value={whatsapp}
+          onChange={(evento) => setWhatsapp(evento.target.value)}
+        />
+        {erro && <p className="text-sm text-red-500">{erro}</p>}
+        {mensagem && <p className="text-sm text-emerald-700">{mensagem}</p>}
+        <Button type="submit" carregando={enviando} className="w-full sm:w-auto">
+          Salvar número
+        </Button>
+      </form>
+    </Card>
+  );
+}
+
 export default function Configuracoes() {
+  const { usuario } = useAuth();
+
   return (
     <div className="bg-gray-50">
       <Container as="main" className="flex flex-col gap-8 py-8">
@@ -446,6 +497,7 @@ export default function Configuracoes() {
           <SecaoAlterarSenha />
           <SecaoDoisFatores />
           <SecaoTelefone />
+          {usuario.role === "proprietario" && <SecaoWhatsappContato />}
         </div>
       </Container>
     </div>
