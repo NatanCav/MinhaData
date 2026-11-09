@@ -2,6 +2,7 @@ import { prisma } from "../lib/prisma.js";
 import { AppError } from "../middlewares/AppError.js";
 import { cpfValido, normalizarCpf } from "../lib/cpf.js";
 import { buscarEspacoEntidadePorSlug } from "./espacosService.js";
+import { enviarEmail } from "./emailService.js";
 
 const REGEX_DATA = /^\d{4}-\d{2}-\d{2}$/;
 const REGEX_HORARIO = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -232,6 +233,12 @@ const TRANSICOES_CLIENTE = {
   cancelada: ["pendente", "confirmada"],
 };
 
+const MENSAGENS_STATUS_CLIENTE = {
+  confirmada: "foi confirmada",
+  recusada: "foi recusada",
+  cancelada: "foi cancelada pelo estabelecimento",
+};
+
 // Decide se uma transição de status é permitida, sem tocar no banco —
 // mantido puro para ser testável isoladamente (ver reservasService.test.js).
 export function avaliarTransicaoStatus({ proprietario, donoDaReserva, novoStatus, statusAtual }) {
@@ -304,6 +311,21 @@ export async function atualizarStatusReserva(usuarioId, id, novoStatus) {
     data: { status: novoStatus },
     include: { espaco: true },
   });
+
+  // Só notifica o cliente quando é o proprietário quem muda o status — se o
+  // próprio cliente cancelou a reserva, ele já sabe, não precisa de e-mail.
+  if (proprietario && novoStatus in MENSAGENS_STATUS_CLIENTE) {
+    await enviarEmail(
+      reservaAtualizada.emailCliente,
+      `Sua reserva em ${reservaAtualizada.espaco.nome} ${MENSAGENS_STATUS_CLIENTE[novoStatus]}`,
+      `Olá, ${reservaAtualizada.nomeCliente}!\n\n` +
+        `Sua reserva ${MENSAGENS_STATUS_CLIENTE[novoStatus]}.\n\n` +
+        `Espaço: ${reservaAtualizada.espaco.nome}\n` +
+        `Data: ${reservaAtualizada.data}\n` +
+        `Horário: ${reservaAtualizada.horarioInicio} às ${reservaAtualizada.horarioFim}\n\n` +
+        "Equipe MinhaData."
+    );
+  }
 
   return paraApi(reservaAtualizada);
 }
