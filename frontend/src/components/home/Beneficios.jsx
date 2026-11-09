@@ -32,9 +32,9 @@ const BENEFICIOS = [
   {
     id: "whatsapp",
     icone: IconeWhatsapp,
-    titulo: "Lembretes automáticos",
+    titulo: "Fechamento pelo WhatsApp",
     descricao:
-      "Confirmação e lembrete da reserva enviados direto pelo WhatsApp, sem esforço manual.",
+      "Combine o valor do sinal, tire dúvidas e finalize os detalhes da reserva direto com o proprietário pelo WhatsApp.",
   },
 ];
 
