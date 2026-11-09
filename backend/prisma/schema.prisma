@@ -115,8 +115,8 @@ enum StatusReserva {
 
 model Reserva {
   id              Int           @id @default(autoincrement())
-  userId          Int
-  user            User          @relation(fields: [userId], references: [id])
+  userId          Int?
+  user            User?         @relation(fields: [userId], references: [id])
   espacoId        Int
   espaco          Espaco        @relation(fields: [espacoId], references: [id])
   data            String

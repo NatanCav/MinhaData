@@ -110,16 +110,21 @@ function paraApi(reserva) {
 export async function criarReserva(userId, payload) {
   validarPayload(payload);
 
-  const usuario = await prisma.user.findUnique({ where: { id: userId } });
-  if (!usuario) {
-    throw new AppError("Usuário não encontrado.", 404);
-  }
+  // Reservar não exige conta — userId só existe quando o cliente estava
+  // logado no momento da reserva (sessão opcional, ver autenticarOpcional).
+  let usuario = null;
+  if (userId) {
+    usuario = await prisma.user.findUnique({ where: { id: userId } });
+    if (!usuario) {
+      throw new AppError("Usuário não encontrado.", 404);
+    }
 
-  if (usuario.tipoConta === "PJ" && !usuario.doisFatoresAtivo) {
-    throw new AppError(
-      "Ative a autenticação de dois fatores na sua conta antes de reservar como pessoa jurídica.",
-      403
-    );
+    if (usuario.tipoConta === "PJ" && !usuario.doisFatoresAtivo) {
+      throw new AppError(
+        "Ative a autenticação de dois fatores na sua conta antes de reservar como pessoa jurídica.",
+        403
+      );
+    }
   }
 
   const espaco = await buscarEspacoEntidadePorSlug(payload.espacoSlug);
@@ -138,24 +143,26 @@ export async function criarReserva(userId, payload) {
 
   const cpfClienteNormalizado = normalizarCpf(payload.cpfCliente);
 
-  if (usuario.cpf && usuario.cpf !== cpfClienteNormalizado) {
-    throw new AppError("O CPF informado não corresponde ao CPF já registrado nesta conta.", 409);
-  }
+  if (usuario) {
+    if (usuario.cpf && usuario.cpf !== cpfClienteNormalizado) {
+      throw new AppError("O CPF informado não corresponde ao CPF já registrado nesta conta.", 409);
+    }
 
-  if (!usuario.cpf) {
-    const cpfEmUso = await prisma.user.findFirst({
-      where: { cpf: cpfClienteNormalizado, NOT: { id: userId } },
-    });
-    if (cpfEmUso) {
-      throw new AppError("Este CPF já está associado a outra conta.", 409);
+    if (!usuario.cpf) {
+      const cpfEmUso = await prisma.user.findFirst({
+        where: { cpf: cpfClienteNormalizado, NOT: { id: userId } },
+      });
+      if (cpfEmUso) {
+        throw new AppError("Este CPF já está associado a outra conta.", 409);
+      }
     }
   }
 
-  const [reserva] = await prisma.$transaction([
+  const operacoes = [
     prisma.reserva.create({
       data: {
         ...dadosReserva,
-        userId,
+        userId: usuario ? userId : null,
         espacoId: espaco.id,
         nomeCliente: payload.nomeCliente.trim(),
         telefoneCliente: payload.telefoneCliente.trim(),
@@ -165,11 +172,18 @@ export async function criarReserva(userId, payload) {
       },
       include: { espaco: true },
     }),
-    prisma.user.update({
-      where: { id: userId },
-      data: { cpf: cpfClienteNormalizado },
-    }),
-  ]);
+  ];
+
+  if (usuario) {
+    operacoes.push(
+      prisma.user.update({
+        where: { id: userId },
+        data: { cpf: cpfClienteNormalizado },
+      })
+    );
+  }
+
+  const [reserva] = await prisma.$transaction(operacoes);
 
   return paraApi(reserva);
 }

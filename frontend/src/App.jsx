@@ -35,14 +35,7 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/espacos" element={<Vitrine />} />
               <Route path="/espacos/:slug" element={<DetalheEspaco />} />
-              <Route
-                path="/reserva"
-                element={
-                  <ProtectedRoute>
-                    <ConfirmarReserva />
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/reserva" element={<ConfirmarReserva />} />
               <Route path="/login" element={<Login />} />
               <Route path="/cadastro" element={<Cadastro />} />
               <Route path="/esqueci-minha-senha" element={<EsqueciMinhaSenha />} />
