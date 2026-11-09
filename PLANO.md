@@ -2,6 +2,8 @@
 
 Plano de desenvolvimento das funcionalidades restantes. Uma etapa por vez, com aprovação explícita antes de avançar para a próxima.
 
+**Status geral (2026-11-09):** Etapas 1-6, 8 e 9 concluídas. Etapa 7 pulada por decisão (ver seção correspondente). Todas as funcionalidades essenciais para o uso inicial com a família estão no ar e testadas em produção.
+
 ## Contexto do produto
 
 Uso inicial: gerenciar um único espaço de lazer da família (piscina, churrasqueira, cozinha equipada, mesa de sinuca, dois banheiros, garagem). Possível evolução futura para SaaS multiempresa — ver seção "Considerações para o futuro SaaS" no fim deste documento. Nenhuma etapa abaixo implementa arquitetura multiempresa; o objetivo agora é fechar as funcionalidades de uso single-tenant sem fechar portas para essa evolução.
@@ -188,7 +190,7 @@ Status: `[ ]` pendente · `[~]` em andamento · `[x]` concluída
 ---
 
 ### Etapa 6 — E-mail transacional real
-**Status:** [ ]
+**Status:** [x] Concluída em 2026-11-08 (em modo de teste)
 
 **Objetivo:** recuperação de senha e notificações de status de reserva passam a ser entregues de verdade.
 
@@ -208,46 +210,53 @@ Status: `[ ]` pendente · `[~]` em andamento · `[x]` concluída
 
 **Testes necessários:** teste manual com e-mail real.
 
----
-
-### Etapa 7 — SMS real para verificação de celular (opcional)
-**Status:** [ ]
-
-**Objetivo:** envio real do código de verificação de telefone.
-
-**Observação importante:** diferente de e-mail, a maioria dos provedores de SMS (Twilio, Zenvia) não tem um free tier realmente gratuito e contínuo — geralmente é crédito de teste que acaba. Antes de implementar, vale decidir se isso é essencial agora ou se pode esperar (a verificação de telefone não bloqueia nenhum fluxo crítico hoje).
-
-**Arquivos afetados:** `backend/src/services/smsService.js`, variáveis de ambiente.
-
-**Dependências:** nenhuma. Depende de escolha e criação de conta no provedor.
-
-**Critério de conclusão:** código de verificação chega por SMS de verdade.
+**Notas de execução:**
+- `emailService.js` chama a API do Resend quando `RESEND_API_KEY` está definida; sem a chave (dev local), continua só logando no console. Recuperação de senha já usava `enviarEmail`, então passou a entregar de verdade automaticamente. Notificação de mudança de status de reserva adicionada em `reservasService.js`.
+- **Decisão registrada:** sem domínio próprio verificado no Resend, o e-mail só é entregue para o endereço da própria conta Resend (restrição deles contra spam). Optou-se por seguir em modo de teste por enquanto — suficiente para o uso inicial com a família. Verificar um domínio fica para quando fizer sentido (ex.: fase SaaS). Commit: `91042e9`.
 
 ---
 
-### Etapa 8 — WhatsApp (confirmação e lembrete de reserva)
-**Status:** [ ]
+### Etapa 7 — SMS real para verificação de celular
+**Status:** Pulada — decisão registrada em 2026-11-08
 
-**Objetivo:** cumprir a proposta de valor original do produto (mencionada no README) — confirmação e lembrete de reserva via WhatsApp.
+**Motivo:** provedores de SMS não têm free tier realmente contínuo, e a verificação de telefone não bloqueia nenhum fluxo crítico do produto. Como o uso inicial é só a família, não compensa o custo/complexidade agora. `smsService.js` continua como estava (loga no console). Pode ser revisitada se o produto crescer para mais usuários externos.
 
-**Observação importante:** a biblioteca não-oficial `whatsapp-web.js` (cogitada originalmente) exige uma sessão de navegador (Puppeteer) sempre ativa com login por QR code — incompatível com o Render free tier, que hiberna o serviço por inatividade e perderia a sessão repetidamente. A alternativa viável nesse tipo de hospedagem é a **API oficial do WhatsApp Business (Meta Cloud API)**, que tem free tier (conversas gratuitas por mês) mas exige: conta Meta Business, verificação de número, e aprovação prévia de modelos de mensagem (template messages) para contato iniciado pela empresa.
+---
 
-Essa é a etapa mais complexa e com mais dependência de processos externos (aprovação da Meta pode levar dias). Recomendo deixá-la por último e reavaliar se vale a pena nesse momento ou se o contato manual (telefone/WhatsApp pessoal) é suficiente para o uso atual com a família.
+### Etapa 8 — WhatsApp (confirmação de reserva)
+**Status:** [x] Concluída em 2026-11-09 — com mudança de escopo
 
-**Dependências:** Etapa 1 concluída (gatilhos de notificação). Depende de você criar e verificar a conta Meta Business.
+**Mudança de abordagem:** a API oficial do WhatsApp Business (Meta Cloud API), originalmente planejada, foi descartada nesta rodada por exigir conta Meta Business, verificação de número e aprovação de template de mensagem — burocracia desproporcional para o uso inicial com a família. Implementado em vez disso um **link "click-to-chat"** (`wa.me/numero?text=mensagem`): sem conta externa, sem aprovação, sem token para gerenciar.
+
+**O que foi implementado:**
+- Proprietário configura seu número de WhatsApp em **Configurações** (campo novo, só visível para quem tem papel de proprietário) — `User.whatsappContato` (migration), `PATCH /api/conta/whatsapp`.
+- Endpoint público `GET /api/config/whatsapp-contato` — usado pelo cliente para montar o link, sem precisar de autenticação.
+- Após criar uma reserva, `ConfirmarReserva.jsx` monta o link com o nome do espaço, data, horário e nome do cliente, e `ModalReservaSucesso.jsx` mostra um botão "Enviar confirmação pelo WhatsApp" que abre o WhatsApp do cliente com a mensagem pronta.
+- Escopo é só a confirmação feita pelo **cliente** para o proprietário (não é o sistema que envia automaticamente) — por isso não depende de nenhum mecanismo de agendamento para lembrete.
+- O código do Meta Cloud API (`whatsappService.js`, usado para notificar o cliente quando o proprietário muda o status de uma reserva) também foi implementado e está no ar, mas sem `WHATSAPP_ACCESS_TOKEN`/`WHATSAPP_PHONE_NUMBER_ID` configuradas — fica como opção futura caso o contato manual não seja mais suficiente.
+
+**Testado em produção:** número configurado na conta real do proprietário, `GET /api/config/whatsapp-contato` confirmado retornando o número certo (depois de limpar contas de teste duplicadas que estavam causando ambiguidade — ver nota abaixo). Commits: `22ecf19`, `aa45a47`.
+
+**Lição aprendida:** o modelo de dono único depende de existir só UMA conta com papel `PROPRIETARIO` no banco. Contas de teste promovidas durante etapas anteriores e não limpas corretamente causaram ambiguidade em `configService.obterWhatsappContato` (que usa `findFirst` sem ordenação). Resolvido limpando as contas de teste órfãs; nenhuma mudança de código foi necessária, já que em uso real só existe um proprietário de verdade.
 
 ---
 
 ### Etapa 9 — Polimento
-**Status:** [ ]
-
-**Objetivo:** fechar os itens de qualidade identificados no diagnóstico que não justificam uma etapa própria.
+**Status:** [x] Concluída em 2026-11-09
 
 **O que entra:**
 - Corrigir o toast de sucesso em `PainelEspacoForm.jsx` que some antes de aparecer (pequeno delay antes do `navigate`, ou mover o toast para a tela de destino).
 - Reavaliar `npm audit` do backend — decidir se vale fazer o upgrade maior do Prisma/ESLint agora ou manter como débito técnico registrado.
 
 **Dependências:** nenhuma — pode ser feita a qualquer momento, inclusive em paralelo.
+
+**Notas de execução:**
+- **Toast corrigido:** a mensagem de sucesso agora viaja via `navigate(path, { state })` e é exibida em `PainelEspacos.jsx` (que já tem toast próprio desde a Etapa 5), em vez de ser disparada na tela que está prestes a desmontar. Commit: `19bd8be`.
+- **`npm audit` reavaliado, decisão: não fazer upgrade agora.** As duas vulnerabilidades restantes (`prisma` CLI via `deepmerge-ts`, `eslint` via `minimatch`) são:
+  - Ambas em dependências de **desenvolvimento** (`prisma` CLI e `eslint`), não no runtime de produção (`@prisma/client` não é afetado).
+  - De exploração improvável no uso real do projeto (exigem input malicioso controlado por atacante em comandos de build/lint, que não existe aqui).
+  - `npm audit fix --force` instalaria `prisma@7.10.1` (major bump) e, curiosamente, **rebaixaria** `eslint` para `9.39.5` (a versão atual já é `^10.8.0`) — uma mudança de dependência confusa o suficiente para arriscar quebrar o `eslint.config.js` atual sem necessidade real.
+  - Mantido como débito técnico registrado; revisitar se o projeto evoluir para expor essas ferramentas a input não confiável (não é o caso hoje).
 
 ---
 
