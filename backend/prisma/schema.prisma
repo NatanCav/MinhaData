@@ -125,8 +125,8 @@ model Reserva {
   status          StatusReserva @default(pendente)
   nomeCliente     String
   telefoneCliente String
-  emailCliente    String
-  cpfCliente      String
+  emailCliente    String?
+  cpfCliente      String?
   observacoes     String?
   observacoesProprietario String?
   createdAt       DateTime      @default(now())

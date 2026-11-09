@@ -44,3 +44,12 @@ export async function excluir(req, res, next) {
     next(erro);
   }
 }
+
+export async function obterDisponibilidade(req, res, next) {
+  try {
+    const disponibilidade = await espacosService.obterDisponibilidade(req.params.slug);
+    res.json(disponibilidade);
+  } catch (erro) {
+    next(erro);
+  }
+}

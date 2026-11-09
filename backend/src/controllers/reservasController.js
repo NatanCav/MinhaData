@@ -9,6 +9,15 @@ export async function criar(req, res, next) {
   }
 }
 
+export async function criarManual(req, res, next) {
+  try {
+    const reservas = await reservasService.criarReservaManual(req.usuarioId, req.body ?? {});
+    res.status(201).json(reservas);
+  } catch (erro) {
+    next(erro);
+  }
+}
+
 export async function obterPorId(req, res, next) {
   try {
     const reserva = await reservasService.buscarReservaPorId(req.params.id, req.usuarioId);

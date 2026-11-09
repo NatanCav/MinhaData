@@ -19,6 +19,11 @@ const HORARIOS_DISPONIVEIS = [
   "20:00",
 ];
 
+// Espaços cobrados por dia têm horário de funcionamento fixo — o cliente só
+// escolhe a(s) data(s), não o horário.
+const HORARIO_FIXO_INICIO = "09:00";
+const HORARIO_FIXO_FIM = "20:00";
+
 const ATRASO_VERIFICACAO_MS = 600;
 const DURACAO_SLOT_HORAS = 2;
 
@@ -35,9 +40,7 @@ export default function CardReserva({ espaco }) {
   const navigate = useNavigate();
   const { iniciarReserva } = useReserva();
 
-  const [data, setData] = useState("");
-  const [horarioInicio, setHorarioInicio] = useState("08:00");
-  const [horarioFim, setHorarioFim] = useState("18:00");
+  const [datas, setDatas] = useState([]);
   const [horarioSelecionado, setHorarioSelecionado] = useState(null);
   const [erros, setErros] = useState({});
   const [verificando, setVerificando] = useState(false);
@@ -56,34 +59,32 @@ export default function CardReserva({ espaco }) {
       .finally(() => setCarregandoDisponibilidade(false));
   }, [slug]);
 
-  const horariosDaData = data
-    ? HORARIOS_DISPONIVEIS.filter(
-        (horario) =>
-          !(disponibilidade.horariosIndisponiveisPorData[data] || []).includes(
-            horario
-          )
-      )
-    : HORARIOS_DISPONIVEIS;
+  // Só mostra horários livres em TODAS as datas selecionadas.
+  const horariosDisponiveisParaSelecao = HORARIOS_DISPONIVEIS.filter((horario) =>
+    datas.every(
+      (data) => !(disponibilidade.horariosIndisponiveisPorData[data] || []).includes(horario)
+    )
+  );
 
-  function selecionarData(novaData) {
-    setData(novaData);
+  function alternarData(novaData) {
+    setDatas((atual) =>
+      atual.includes(novaData)
+        ? atual.filter((item) => item !== novaData)
+        : [...atual, novaData].sort()
+    );
     setHorarioSelecionado(null);
-    setErros((atual) => ({ ...atual, data: null, horario: null }));
+    setErros((atual) => ({ ...atual, datas: null, horario: null }));
   }
 
   function validar() {
     const novosErros = {};
 
-    if (!data) {
-      novosErros.data = "Selecione uma data para continuar.";
+    if (datas.length === 0) {
+      novosErros.datas = "Selecione ao menos uma data para continuar.";
     }
 
     if (porHora && !horarioSelecionado) {
       novosErros.horario = "Selecione um horário disponível.";
-    }
-
-    if (!porHora && horarioInicio && horarioFim && horarioFim <= horarioInicio) {
-      novosErros.horario = "O horário final deve ser depois do inicial.";
     }
 
     return novosErros;
@@ -102,14 +103,18 @@ export default function CardReserva({ espaco }) {
       setVerificando(false);
       iniciarReserva({
         espaco,
-        data,
-        horario: porHora ? horarioSelecionado : `${horarioInicio} às ${horarioFim}`,
-        horarioInicio: porHora ? horarioSelecionado : horarioInicio,
-        horarioFim: porHora ? somarHoras(horarioSelecionado, DURACAO_SLOT_HORAS) : horarioFim,
+        datas,
+        horario: porHora
+          ? horarioSelecionado
+          : `${HORARIO_FIXO_INICIO} às ${HORARIO_FIXO_FIM}`,
+        horarioInicio: porHora ? horarioSelecionado : HORARIO_FIXO_INICIO,
+        horarioFim: porHora ? somarHoras(horarioSelecionado, DURACAO_SLOT_HORAS) : HORARIO_FIXO_FIM,
       });
       navigate("/reserva");
     }, ATRASO_VERIFICACAO_MS);
   }
+
+  const total = preco * datas.length;
 
   return (
     <Card className="flex flex-col gap-4">
@@ -124,7 +129,9 @@ export default function CardReserva({ espaco }) {
         </div>
 
         <div className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-gray-700">Escolha a data</span>
+          <span className="text-sm font-medium text-gray-700">
+            Escolha a(s) data(s)
+          </span>
 
           {carregandoDisponibilidade && (
             <Skeleton className="h-56 w-full rounded-lg" />
@@ -136,29 +143,29 @@ export default function CardReserva({ espaco }) {
 
           {!carregandoDisponibilidade && !erroDisponibilidade && (
             <Calendario
-              dataSelecionada={data}
-              onSelecionarData={selecionarData}
+              datasSelecionadas={datas}
+              onSelecionarData={alternarData}
               datasIndisponiveis={disponibilidade.datasIndisponiveis}
               desabilitado={!disponivel}
             />
           )}
-          {erros.data && <p className="text-xs text-red-500">{erros.data}</p>}
+          {erros.datas && <p className="text-xs text-red-500">{erros.datas}</p>}
         </div>
 
         {porHora ? (
           <div className="flex flex-col gap-2">
             <span className="text-sm font-medium text-gray-700">Horário</span>
-            {!data && (
+            {datas.length === 0 && (
               <p className="text-xs text-gray-400">Selecione uma data primeiro.</p>
             )}
             <div className="flex flex-wrap gap-2">
               {HORARIOS_DISPONIVEIS.map((horario) => {
-                const indisponivel = !horariosDaData.includes(horario);
+                const indisponivel = !horariosDisponiveisParaSelecao.includes(horario);
                 return (
                   <button
                     key={horario}
                     type="button"
-                    disabled={!disponivel || !data || indisponivel}
+                    disabled={!disponivel || datas.length === 0 || indisponivel}
                     aria-pressed={horarioSelecionado === horario}
                     onClick={() => {
                       setHorarioSelecionado(horario);
@@ -182,38 +189,21 @@ export default function CardReserva({ espaco }) {
         ) : (
           <div className="flex flex-col gap-1">
             <span className="text-sm font-medium text-gray-700">Horário</span>
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <IconeRelogio className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="time"
-                  aria-label="Horário de início"
-                  value={horarioInicio}
-                  disabled={!disponivel}
-                  onChange={(evento) => {
-                    setHorarioInicio(evento.target.value);
-                    setErros((atual) => ({ ...atual, horario: null }));
-                  }}
-                  className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-2 text-sm text-gray-800 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
-                />
-              </div>
-              <span className="text-sm text-gray-400">até</span>
-              <div className="relative flex-1">
-                <IconeRelogio className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="time"
-                  aria-label="Horário de término"
-                  value={horarioFim}
-                  disabled={!disponivel}
-                  onChange={(evento) => {
-                    setHorarioFim(evento.target.value);
-                    setErros((atual) => ({ ...atual, horario: null }));
-                  }}
-                  className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-2 text-sm text-gray-800 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
-                />
-              </div>
-            </div>
-            {erros.horario && <p className="text-xs text-red-500">{erros.horario}</p>}
+            <p className="flex items-center gap-2 text-sm text-gray-600">
+              <IconeRelogio className="h-4 w-4 text-gray-400" />
+              {HORARIO_FIXO_INICIO} às {HORARIO_FIXO_FIM}
+            </p>
+          </div>
+        )}
+
+        {datas.length > 1 && (
+          <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+            <span className="text-sm text-gray-500">
+              {datas.length} datas selecionadas
+            </span>
+            <span className="text-sm font-semibold text-gray-800">
+              Total: R$ {total.toFixed(2)}
+            </span>
           </div>
         )}
 

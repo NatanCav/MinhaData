@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import SectionTitle from "../../components/ui/SectionTitle";
 import Card from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
@@ -110,6 +111,15 @@ export default function PainelReservas() {
   const [filtroStatus, setFiltroStatus] = useState("");
 
   const { toast, mostrarToast, fecharToast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!location.state?.mensagemSucesso) return;
+    mostrarToast(location.state.mensagemSucesso, "sucesso");
+    navigate(location.pathname, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- so deve rodar quando a tela e navegada com um state novo
+  }, [location.state]);
 
   useEffect(() => {
     getReservasDoProprietario()
@@ -147,12 +157,18 @@ export default function PainelReservas() {
 
   return (
     <div className="flex flex-col gap-8">
-      <SectionTitle
-        nivel="pagina"
-        subtitulo="Aprove, recuse ou cancele as solicitações dos seus clientes."
-      >
-        Reservas
-      </SectionTitle>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <SectionTitle
+          nivel="pagina"
+          subtitulo="Aprove, recuse ou cancele as solicitações dos seus clientes."
+        >
+          Reservas
+        </SectionTitle>
+
+        <Button as={Link} to="/gestao/reservas/nova" className="shrink-0">
+          Cadastrar reserva
+        </Button>
+      </div>
 
       {!carregando && !erro && reservas.length > 0 && (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
@@ -225,7 +241,7 @@ export default function PainelReservas() {
                   </div>
 
                   <p className="text-sm text-gray-600">
-                    {reserva.nomeCliente} · {reserva.emailCliente}
+                    {reserva.nomeCliente} · {reserva.telefoneCliente}
                   </p>
 
                   <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">

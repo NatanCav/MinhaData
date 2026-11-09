@@ -29,13 +29,15 @@ function inicioDoDia(data) {
 
 export default function Calendario({
   dataSelecionada,
+  datasSelecionadas,
   onSelecionarData,
   datasIndisponiveis = [],
   desabilitado = false,
 }) {
   const hoje = inicioDoDia(new Date());
   const [mesExibido, setMesExibido] = useState(() => {
-    const base = dataSelecionada ? new Date(`${dataSelecionada}T00:00:00`) : hoje;
+    const referencia = dataSelecionada || datasSelecionadas?.[0];
+    const base = referencia ? new Date(`${referencia}T00:00:00`) : hoje;
     return { ano: base.getFullYear(), mes: base.getMonth() };
   });
 
@@ -94,7 +96,9 @@ export default function Calendario({
           const iso = paraISO(mesExibido.ano, mesExibido.mes, dia);
           const noPassado = new Date(mesExibido.ano, mesExibido.mes, dia) < hoje;
           const indisponivel = datasIndisponiveis.includes(iso);
-          const selecionado = dataSelecionada === iso;
+          const selecionado = datasSelecionadas
+            ? datasSelecionadas.includes(iso)
+            : dataSelecionada === iso;
           const inativo = desabilitado || noPassado || indisponivel;
 
           return (
@@ -103,7 +107,9 @@ export default function Calendario({
               type="button"
               disabled={inativo}
               onClick={() => onSelecionarData(iso)}
-              aria-label={`Selecionar ${dia} de ${NOMES_MES[mesExibido.mes]}`}
+              aria-label={`${selecionado ? "Remover seleção de" : "Selecionar"} ${dia} de ${
+                NOMES_MES[mesExibido.mes]
+              }`}
               aria-pressed={selecionado}
               className={`aspect-square rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed ${
                 selecionado

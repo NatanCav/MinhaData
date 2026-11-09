@@ -16,7 +16,7 @@ function formatarData(data) {
 
 export default function ModalReservaSucesso({
   espaco,
-  data,
+  datas,
   horario,
   codigoReserva,
   linkWhatsapp,
@@ -93,10 +93,12 @@ export default function ModalReservaSucesso({
 
         <div className="mt-6 flex flex-col gap-2 rounded-lg border border-gray-100 bg-gray-50 p-4">
           <p className="text-sm font-semibold text-gray-800">{espaco.nome}</p>
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <IconeCalendario className="h-4 w-4" />
-            {formatarData(data)}
-          </div>
+          {datas.map((data) => (
+            <div key={data} className="flex items-center gap-2 text-sm text-gray-500">
+              <IconeCalendario className="h-4 w-4 shrink-0" />
+              {formatarData(data)}
+            </div>
+          ))}
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <IconeRelogio className="h-4 w-4" />
             {horario}

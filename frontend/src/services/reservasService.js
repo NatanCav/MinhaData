@@ -27,6 +27,10 @@ export async function criarReserva(dadosReserva) {
   return requisitar("", { method: "POST", body: dadosReserva });
 }
 
+export async function criarReservaManual(dadosReserva) {
+  return requisitar("/manual", { method: "POST", body: dadosReserva });
+}
+
 export async function getReservaPorId(id) {
   return requisitar(`/${id}`);
 }

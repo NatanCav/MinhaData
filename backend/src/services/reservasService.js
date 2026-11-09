@@ -7,7 +7,6 @@ import { enviarWhatsapp } from "./whatsappService.js";
 
 const REGEX_DATA = /^\d{4}-\d{2}-\d{2}$/;
 const REGEX_HORARIO = /^([01]\d|2[0-3]):[0-5]\d$/;
-const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function validarData(data) {
   if (!REGEX_DATA.test(data)) return false;
@@ -20,21 +19,23 @@ function validarData(data) {
   );
 }
 
-function validarPayload({
-  espacoSlug,
-  data,
-  horarioInicio,
-  horarioFim,
-  nomeCliente,
-  telefoneCliente,
-  emailCliente,
-  cpfCliente,
-}) {
+function validarDatas(datas) {
+  if (!Array.isArray(datas) || datas.length === 0) {
+    throw new AppError("Selecione ao menos uma data.");
+  }
+  if (new Set(datas).size !== datas.length) {
+    throw new AppError("Datas repetidas não são permitidas.");
+  }
+  for (const data of datas) {
+    if (!validarData(data)) {
+      throw new AppError("Informe datas válidas (formato AAAA-MM-DD).");
+    }
+  }
+}
+
+function validarCamposComuns({ espacoSlug, horarioInicio, horarioFim, nomeCliente, telefoneCliente }) {
   if (!espacoSlug || typeof espacoSlug !== "string") {
     throw new AppError("Informe o espaço da reserva.");
-  }
-  if (!data || !validarData(data)) {
-    throw new AppError("Informe uma data válida (formato AAAA-MM-DD).");
   }
   if (!horarioInicio || !REGEX_HORARIO.test(horarioInicio)) {
     throw new AppError("Informe um horário de início válido (formato HH:MM).");
@@ -51,11 +52,26 @@ function validarPayload({
   if (!telefoneCliente || !telefoneCliente.trim()) {
     throw new AppError("Informe o telefone do cliente.");
   }
-  if (!emailCliente || !REGEX_EMAIL.test(emailCliente.trim())) {
-    throw new AppError("Informe um e-mail válido.");
-  }
-  if (!cpfCliente || !cpfValido(cpfCliente)) {
+}
+
+// Validação do fluxo público (cliente reservando pelo site): CPF é
+// obrigatório, para identificação junto ao estabelecimento.
+function validarPayload(payload) {
+  validarCamposComuns(payload);
+  validarDatas(payload.datas);
+  if (!payload.cpfCliente || !cpfValido(payload.cpfCliente)) {
     throw new AppError("Informe um CPF válido para identificação no contato com o estabelecimento.");
+  }
+}
+
+// Validação do cadastro manual (proprietário registrando uma reserva feita
+// por fora, ex. Instagram/WhatsApp): CPF é opcional, mas se informado tem
+// que ser válido.
+function validarPayloadManual(payload) {
+  validarCamposComuns(payload);
+  validarDatas(payload.datas);
+  if (payload.cpfCliente && !cpfValido(payload.cpfCliente)) {
+    throw new AppError("CPF inválido.");
   }
 }
 
@@ -63,25 +79,26 @@ export function horariosSeSobrepoe(inicioA, fimA, inicioB, fimB) {
   return inicioA < fimB && fimA > inicioB;
 }
 
-async function garantirSemConflito({ espacoId, data, horarioInicio, horarioFim }) {
-  const reservasNaData = await prisma.reserva.findMany({
-    where: {
-      espacoId,
-      data,
-      status: { in: ["pendente", "confirmada"] },
-    },
-  });
+async function encontrarDatasComConflito({ espacoId, datas, horarioInicio, horarioFim }) {
+  const conflitos = [];
 
-  const haConflito = reservasNaData.some((reserva) =>
-    horariosSeSobrepoe(horarioInicio, horarioFim, reserva.horarioInicio, reserva.horarioFim)
-  );
+  for (const data of datas) {
+    const reservasNaData = await prisma.reserva.findMany({
+      where: {
+        espacoId,
+        data,
+        status: { in: ["pendente", "confirmada"] },
+      },
+    });
 
-  if (haConflito) {
-    throw new AppError(
-      "Já existe uma reserva para esse espaço nesta data e horário.",
-      409
+    const haConflito = reservasNaData.some((reserva) =>
+      horariosSeSobrepoe(horarioInicio, horarioFim, reserva.horarioInicio, reserva.horarioFim)
     );
+
+    if (haConflito) conflitos.push(data);
   }
+
+  return conflitos;
 }
 
 function paraApi(reserva) {
@@ -107,6 +124,68 @@ function paraApi(reserva) {
   };
 }
 
+// Núcleo comum de criação: valida disponibilidade do espaço, checa conflito
+// em todas as datas pedidas (tudo ou nada — se qualquer uma conflitar,
+// nenhuma reserva é criada) e grava uma linha de Reserva por data.
+async function criarReservasParaDatas({
+  espacoSlug,
+  datas,
+  horarioInicio,
+  horarioFim,
+  nomeCliente,
+  telefoneCliente,
+  emailCliente,
+  cpfCliente,
+  observacoes,
+  userId,
+  status,
+}) {
+  const espaco = await buscarEspacoEntidadePorSlug(espacoSlug);
+
+  if (!espaco.disponivel) {
+    throw new AppError("Este espaço não está disponível para reservas.", 409);
+  }
+
+  const conflitos = await encontrarDatasComConflito({
+    espacoId: espaco.id,
+    datas,
+    horarioInicio,
+    horarioFim,
+  });
+
+  if (conflitos.length > 0) {
+    throw new AppError(
+      `Já existe reserva para esse espaço e horário em: ${conflitos.join(", ")}.`,
+      409
+    );
+  }
+
+  const cpfNormalizado = cpfCliente ? normalizarCpf(cpfCliente) : null;
+
+  const reservas = await prisma.$transaction(
+    datas.map((data) =>
+      prisma.reserva.create({
+        data: {
+          data,
+          horarioInicio,
+          horarioFim,
+          status,
+          userId: userId || null,
+          espacoId: espaco.id,
+          nomeCliente: nomeCliente.trim(),
+          telefoneCliente: telefoneCliente.trim(),
+          emailCliente: emailCliente?.trim() || null,
+          cpfCliente: cpfNormalizado,
+          observacoes: observacoes?.trim() || null,
+        },
+        include: { espaco: true },
+      })
+    )
+  );
+
+  return reservas.map(paraApi);
+}
+
 export async function criarReserva(userId, payload) {
   validarPayload(payload);
 
@@ -127,20 +206,6 @@ export async function criarReserva(userId, payload) {
     }
   }
 
-  const espaco = await buscarEspacoEntidadePorSlug(payload.espacoSlug);
-
-  if (!espaco.disponivel) {
-    throw new AppError("Este espaço não está disponível para reservas.", 409);
-  }
-
-  const dadosReserva = {
-    data: payload.data,
-    horarioInicio: payload.horarioInicio,
-    horarioFim: payload.horarioFim,
-  };
-
-  await garantirSemConflito({ espacoId: espaco.id, ...dadosReserva });
-
   const cpfClienteNormalizado = normalizarCpf(payload.cpfCliente);
 
   if (usuario) {
@@ -158,34 +223,54 @@ export async function criarReserva(userId, payload) {
     }
   }
 
-  const operacoes = [
-    prisma.reserva.create({
-      data: {
-        ...dadosReserva,
-        userId: usuario ? userId : null,
-        espacoId: espaco.id,
-        nomeCliente: payload.nomeCliente.trim(),
-        telefoneCliente: payload.telefoneCliente.trim(),
-        emailCliente: payload.emailCliente.trim(),
-        cpfCliente: cpfClienteNormalizado,
-        observacoes: payload.observacoes?.trim() || null,
-      },
-      include: { espaco: true },
-    }),
-  ];
+  const reservas = await criarReservasParaDatas({
+    espacoSlug: payload.espacoSlug,
+    datas: payload.datas,
+    horarioInicio: payload.horarioInicio,
+    horarioFim: payload.horarioFim,
+    nomeCliente: payload.nomeCliente,
+    telefoneCliente: payload.telefoneCliente,
+    emailCliente: payload.emailCliente,
+    cpfCliente: payload.cpfCliente,
+    observacoes: payload.observacoes,
+    userId,
+    status: "pendente",
+  });
 
   if (usuario) {
-    operacoes.push(
-      prisma.user.update({
-        where: { id: userId },
-        data: { cpf: cpfClienteNormalizado },
-      })
-    );
+    await prisma.user.update({
+      where: { id: userId },
+      data: { cpf: cpfClienteNormalizado },
+    });
   }
 
-  const [reserva] = await prisma.$transaction(operacoes);
+  return reservas;
+}
 
-  return paraApi(reserva);
+// Cadastro manual: o proprietário registra uma reserva combinada fora do
+// site (Instagram, WhatsApp pessoal, telefone). Entra direto como
+// "confirmada" — já é um acordo fechado, não uma solicitação pendente — e
+// não dispara nenhuma notificação ao cliente.
+export async function criarReservaManual(usuarioId, payload) {
+  if (!(await ehProprietario(usuarioId))) {
+    throw new AppError("Apenas o proprietário pode cadastrar reservas manualmente.", 403);
+  }
+
+  validarPayloadManual(payload);
+
+  return criarReservasParaDatas({
+    espacoSlug: payload.espacoSlug,
+    datas: payload.datas,
+    horarioInicio: payload.horarioInicio,
+    horarioFim: payload.horarioFim,
+    nomeCliente: payload.nomeCliente,
+    telefoneCliente: payload.telefoneCliente,
+    emailCliente: payload.emailCliente,
+    cpfCliente: payload.cpfCliente,
+    observacoes: payload.observacoes,
+    userId: null,
+    status: "confirmada",
+  });
 }
 
 async function ehProprietario(usuarioId) {
@@ -331,16 +416,18 @@ export async function atualizarStatusReserva(usuarioId, id, novoStatus) {
   // Só notifica o cliente quando é o proprietário quem muda o status — se o
   // próprio cliente cancelou a reserva, ele já sabe, não precisa de e-mail.
   if (proprietario && novoStatus in MENSAGENS_STATUS_CLIENTE) {
-    await enviarEmail(
-      reservaAtualizada.emailCliente,
-      `Sua reserva em ${reservaAtualizada.espaco.nome} ${MENSAGENS_STATUS_CLIENTE[novoStatus]}`,
-      `Olá, ${reservaAtualizada.nomeCliente}!\n\n` +
-        `Sua reserva ${MENSAGENS_STATUS_CLIENTE[novoStatus]}.\n\n` +
-        `Espaço: ${reservaAtualizada.espaco.nome}\n` +
-        `Data: ${reservaAtualizada.data}\n` +
-        `Horário: ${reservaAtualizada.horarioInicio} às ${reservaAtualizada.horarioFim}\n\n` +
-        "Equipe MinhaData."
-    );
+    if (reservaAtualizada.emailCliente) {
+      await enviarEmail(
+        reservaAtualizada.emailCliente,
+        `Sua reserva em ${reservaAtualizada.espaco.nome} ${MENSAGENS_STATUS_CLIENTE[novoStatus]}`,
+        `Olá, ${reservaAtualizada.nomeCliente}!\n\n` +
+          `Sua reserva ${MENSAGENS_STATUS_CLIENTE[novoStatus]}.\n\n` +
+          `Espaço: ${reservaAtualizada.espaco.nome}\n` +
+          `Data: ${reservaAtualizada.data}\n` +
+          `Horário: ${reservaAtualizada.horarioInicio} às ${reservaAtualizada.horarioFim}\n\n` +
+          "Equipe MinhaData."
+      );
+    }
 
     await enviarWhatsapp(reservaAtualizada.telefoneCliente, [
       reservaAtualizada.nomeCliente,

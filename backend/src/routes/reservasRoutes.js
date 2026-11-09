@@ -7,6 +7,7 @@ const router = Router();
 router.get("/", autenticar, exigirProprietario, reservasController.listarTodas);
 router.get("/minhas", autenticar, reservasController.listarMinhas);
 router.post("/", autenticarOpcional, reservasController.criar);
+router.post("/manual", autenticar, exigirProprietario, reservasController.criarManual);
 router.get("/:id", autenticar, reservasController.obterPorId);
 router.patch("/:id/status", autenticar, reservasController.atualizarStatus);
 router.patch(

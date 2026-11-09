@@ -12,8 +12,6 @@ import { IconeCalendario, IconeRelogio } from "../../components/ui/Icones";
 import { criarReserva } from "../../services/reservasService";
 import { getWhatsappContato } from "../../services/configService";
 
-const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 function normalizarCpf(cpf) {
   return String(cpf ?? "").replace(/\D/g, "");
 }
@@ -60,14 +58,13 @@ export default function ConfirmarReserva() {
 
   const [nome, setNome] = useState(usuario?.nome ?? "");
   const [telefone, setTelefone] = useState(usuario?.telefone ?? "");
-  const [email, setEmail] = useState(usuario?.email ?? "");
   const [cpf, setCpf] = useState(usuario?.cpf ?? "");
   const [observacoes, setObservacoes] = useState("");
   const [erros, setErros] = useState({});
   const [modalAberto, setModalAberto] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erroEnvio, setErroEnvio] = useState(null);
-  const [reservaConfirmada, setReservaConfirmada] = useState(null);
+  const [reservasConfirmadas, setReservasConfirmadas] = useState(null);
   const [linkWhatsapp, setLinkWhatsapp] = useState(null);
 
   if (!reserva) {
@@ -82,18 +79,13 @@ export default function ConfirmarReserva() {
     );
   }
 
-  const { espaco, data, horario, horarioInicio, horarioFim } = reserva;
+  const { espaco, datas, horario, horarioInicio, horarioFim } = reserva;
 
   function validar() {
     const novosErros = {};
 
     if (!nome.trim()) novosErros.nome = "Informe seu nome.";
     if (!telefone.trim()) novosErros.telefone = "Informe seu telefone.";
-    if (!email.trim()) {
-      novosErros.email = "Informe seu e-mail.";
-    } else if (!REGEX_EMAIL.test(email.trim())) {
-      novosErros.email = "Informe um e-mail válido.";
-    }
     if (!cpf.trim()) {
       novosErros.cpf = "Informe seu CPF para identificação junto ao estabelecimento.";
     } else if (!cpfValido(cpf)) {
@@ -113,27 +105,28 @@ export default function ConfirmarReserva() {
     setErroEnvio(null);
     setEnviando(true);
     try {
-      const reservaCriada = await criarReserva({
+      const reservasCriadas = await criarReserva({
         espacoSlug: espaco.slug,
-        data,
+        datas,
         horarioInicio,
         horarioFim,
         nomeCliente: nome,
         telefoneCliente: telefone,
-        emailCliente: email,
         cpfCliente: cpf,
         observacoes,
       });
 
-      definirFormulario({ nome, telefone, email, cpf, observacoes });
-      setReservaConfirmada(reservaCriada);
+      definirFormulario({ nome, telefone, cpf, observacoes });
+      setReservasConfirmadas(reservasCriadas);
       setModalAberto(true);
 
       const whatsappProprietario = await getWhatsappContato();
       if (whatsappProprietario) {
+        const datasFormatadas = datas.map(formatarData).join(", ");
         const mensagem =
           `Olá! Acabei de reservar o espaço *${espaco.nome}* ` +
-          `para o dia ${formatarData(data)} às ${reservaCriada.horarioInicio}. ` +
+          `para ${datas.length > 1 ? "as datas" : "o dia"} ${datasFormatadas}, ` +
+          `${reservasCriadas[0].horarioInicio} às ${reservasCriadas[0].horarioFim}. ` +
           `Meu nome: ${nome}.`;
         const numero = formatarNumeroWhatsapp(whatsappProprietario);
         setLinkWhatsapp(`https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`);
@@ -152,11 +145,8 @@ export default function ConfirmarReserva() {
     navigate("/");
   }
 
-  const horarioConfirmado = reservaConfirmada
-    ? espaco.unidadePreco === "hora"
-      ? reservaConfirmada.horarioInicio
-      : `${reservaConfirmada.horarioInicio} às ${reservaConfirmada.horarioFim}`
-    : horario;
+  const horarioExibido =
+    espaco.unidadePreco === "hora" ? horarioInicio : `${horarioInicio} às ${horarioFim}`;
 
   return (
     <div className="bg-gray-50">
@@ -189,40 +179,6 @@ export default function ConfirmarReserva() {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="telefone" className="text-sm font-medium text-gray-700">
-                Telefone
-              </label>
-              <input
-                id="telefone"
-                type="tel"
-                value={telefone}
-                onChange={(evento) => {
-                  setTelefone(evento.target.value);
-                  setErros((atual) => ({ ...atual, telefone: null }));
-                }}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600"
-              />
-              {erros.telefone && <p className="text-xs text-red-500">{erros.telefone}</p>}
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label htmlFor="email" className="text-sm font-medium text-gray-700">
-                E-mail
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(evento) => {
-                  setEmail(evento.target.value);
-                  setErros((atual) => ({ ...atual, email: null }));
-                }}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600"
-              />
-              {erros.email && <p className="text-xs text-red-500">{erros.email}</p>}
-            </div>
-
-            <div className="flex flex-col gap-1">
               <label htmlFor="cpf" className="text-sm font-medium text-gray-700">
                 CPF
               </label>
@@ -242,6 +198,23 @@ export default function ConfirmarReserva() {
                 Necessário para identificação no contato com o estabelecimento.
               </p>
               {erros.cpf && <p className="text-xs text-red-500">{erros.cpf}</p>}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label htmlFor="telefone" className="text-sm font-medium text-gray-700">
+                Telefone
+              </label>
+              <input
+                id="telefone"
+                type="tel"
+                value={telefone}
+                onChange={(evento) => {
+                  setTelefone(evento.target.value);
+                  setErros((atual) => ({ ...atual, telefone: null }));
+                }}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+              />
+              {erros.telefone && <p className="text-xs text-red-500">{erros.telefone}</p>}
             </div>
 
             <div className="flex flex-col gap-1">
@@ -280,36 +253,44 @@ export default function ConfirmarReserva() {
 
             <p className="text-sm font-semibold text-gray-800">{espaco.nome}</p>
 
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <IconeCalendario className="h-4 w-4" />
-              {formatarData(data)}
+            <div className="flex flex-col gap-1">
+              {datas.map((data) => (
+                <div key={data} className="flex items-center gap-2 text-sm text-gray-500">
+                  <IconeCalendario className="h-4 w-4 shrink-0" />
+                  {formatarData(data)}
+                </div>
+              ))}
             </div>
 
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <IconeRelogio className="h-4 w-4" />
-              {horario}
+              {horario || horarioExibido}
             </div>
 
             <div className="flex items-center justify-between border-t border-gray-100 pt-4">
-              <span className="text-sm text-gray-500">Valor</span>
+              <span className="text-sm text-gray-500">
+                Valor{datas.length > 1 ? ` (${datas.length} datas)` : ""}
+              </span>
               <p className="text-lg font-semibold text-gray-800">
-                R$ {espaco.preco.toFixed(2)}
-                <span className="text-sm font-normal text-gray-400">
-                  {" "}
-                  /{espaco.unidadePreco}
-                </span>
+                R$ {(espaco.preco * datas.length).toFixed(2)}
+                {datas.length === 1 && (
+                  <span className="text-sm font-normal text-gray-400">
+                    {" "}
+                    /{espaco.unidadePreco}
+                  </span>
+                )}
               </p>
             </div>
           </Card>
         </aside>
       </Container>
 
-      {modalAberto && reservaConfirmada && (
+      {modalAberto && reservasConfirmadas && (
         <ModalReservaSucesso
           espaco={espaco}
-          data={reservaConfirmada.data}
-          horario={horarioConfirmado}
-          codigoReserva={reservaConfirmada.id}
+          datas={reservasConfirmadas.map((reservaCriada) => reservaCriada.data)}
+          horario={horarioExibido}
+          codigoReserva={reservasConfirmadas[0].id}
           linkWhatsapp={linkWhatsapp}
           onFechar={handleFecharModal}
         />

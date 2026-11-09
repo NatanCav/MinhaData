@@ -6,6 +6,7 @@ const router = Router();
 
 router.get("/", espacosController.listar);
 router.get("/:slug", espacosController.obterPorSlug);
+router.get("/:slug/disponibilidade", espacosController.obterDisponibilidade);
 router.post("/", autenticar, exigirProprietario, espacosController.criar);
 router.put("/:slug", autenticar, exigirProprietario, espacosController.atualizar);
 router.delete("/:slug", autenticar, exigirProprietario, espacosController.excluir);

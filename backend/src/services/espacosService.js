@@ -174,3 +174,52 @@ export async function excluirEspaco(slug) {
 
   await prisma.espaco.delete({ where: { id: espaco.id } });
 }
+
+const HORARIOS_SLOT_PADRAO = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00"];
+const DURACAO_SLOT_HORAS = 2;
+
+function somarHoras(horario, horas) {
+  const [h, m] = horario.split(":").map(Number);
+  const novaHora = (h + horas) % 24;
+  return `${String(novaHora).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function horariosSeSobrepoe(inicioA, fimA, inicioB, fimB) {
+  return inicioA < fimB && fimA > inicioB;
+}
+
+// Agenda real do espaço — usada pelo calendário público para bloquear datas
+// (ou horários, para espaços cobrados por hora) já reservados.
+export async function obterDisponibilidade(slug) {
+  const espaco = await buscarEspacoEntidadePorSlug(slug);
+
+  const reservas = await prisma.reserva.findMany({
+    where: { espacoId: espaco.id, status: { in: ["pendente", "confirmada"] } },
+    select: { data: true, horarioInicio: true, horarioFim: true },
+  });
+
+  if (espaco.unidadePreco !== "hora") {
+    return {
+      datasIndisponiveis: [...new Set(reservas.map((reserva) => reserva.data))],
+      horariosIndisponiveisPorData: {},
+    };
+  }
+
+  const horariosIndisponiveisPorData = {};
+  for (const reserva of reservas) {
+    const bloqueados = HORARIOS_SLOT_PADRAO.filter((horario) =>
+      horariosSeSobrepoe(
+        horario,
+        somarHoras(horario, DURACAO_SLOT_HORAS),
+        reserva.horarioInicio,
+        reserva.horarioFim
+      )
+    );
+    if (bloqueados.length === 0) continue;
+
+    const atuais = horariosIndisponiveisPorData[reserva.data] || [];
+    horariosIndisponiveisPorData[reserva.data] = [...new Set([...atuais, ...bloqueados])];
+  }
+
+  return { datasIndisponiveis: [], horariosIndisponiveisPorData };
+}

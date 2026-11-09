@@ -4,14 +4,14 @@ import { ReservaContext } from "./reservaContext.js";
 export function ReservaProvider({ children }) {
   const [reserva, setReserva] = useState(null);
 
-  function iniciarReserva({ espaco, data, horario, horarioInicio, horarioFim }) {
+  function iniciarReserva({ espaco, datas, horario, horarioInicio, horarioFim }) {
     setReserva({
       espaco,
-      data,
+      datas,
       horario,
       horarioInicio,
       horarioFim,
-      formulario: { nome: "", telefone: "", email: "", observacoes: "" },
+      formulario: { nome: "", telefone: "", cpf: "", observacoes: "" },
     });
   }
 
