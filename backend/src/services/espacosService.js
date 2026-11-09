@@ -3,7 +3,7 @@ import { AppError } from "../middlewares/AppError.js";
 
 const REGEX_DIACRITICOS = /[̀-ͯ]/g;
 
-function gerarSlugBase(nome) {
+export function gerarSlugBase(nome) {
   return nome
     .trim()
     .toLowerCase()

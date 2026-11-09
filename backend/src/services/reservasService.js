@@ -57,6 +57,10 @@ function validarPayload({
   }
 }
 
+export function horariosSeSobrepoe(inicioA, fimA, inicioB, fimB) {
+  return inicioA < fimB && fimA > inicioB;
+}
+
 async function garantirSemConflito({ espacoId, data, horarioInicio, horarioFim }) {
   const reservasNaData = await prisma.reserva.findMany({
     where: {
@@ -66,9 +70,8 @@ async function garantirSemConflito({ espacoId, data, horarioInicio, horarioFim }
     },
   });
 
-  const haConflito = reservasNaData.some(
-    (reserva) =>
-      horarioInicio < reserva.horarioFim && horarioFim > reserva.horarioInicio
+  const haConflito = reservasNaData.some((reserva) =>
+    horariosSeSobrepoe(horarioInicio, horarioFim, reserva.horarioInicio, reserva.horarioFim)
   );
 
   if (haConflito) {
@@ -229,11 +232,34 @@ const TRANSICOES_CLIENTE = {
   cancelada: ["pendente", "confirmada"],
 };
 
-export async function atualizarStatusReserva(usuarioId, id, novoStatus) {
+// Decide se uma transição de status é permitida, sem tocar no banco —
+// mantido puro para ser testável isoladamente (ver reservasService.test.js).
+export function avaliarTransicaoStatus({ proprietario, donoDaReserva, novoStatus, statusAtual }) {
   if (!STATUS_VALIDOS.includes(novoStatus)) {
-    throw new AppError("Status inválido.");
+    return { permitido: false, motivo: "status_invalido" };
   }
 
+  let transicoesPermitidas;
+  if (proprietario) {
+    transicoesPermitidas = TRANSICOES_PROPRIETARIO;
+  } else if (donoDaReserva) {
+    transicoesPermitidas = TRANSICOES_CLIENTE;
+  } else {
+    return { permitido: false, motivo: "sem_acesso" };
+  }
+
+  if (!(novoStatus in transicoesPermitidas)) {
+    return { permitido: false, motivo: "sem_permissao" };
+  }
+
+  if (!transicoesPermitidas[novoStatus].includes(statusAtual)) {
+    return { permitido: false, motivo: "transicao_invalida" };
+  }
+
+  return { permitido: true };
+}
+
+export async function atualizarStatusReserva(usuarioId, id, novoStatus) {
   const idNumerico = Number(id);
   if (!Number.isInteger(idNumerico)) {
     throw new AppError("Identificador de reserva inválido.");
@@ -247,21 +273,26 @@ export async function atualizarStatusReserva(usuarioId, id, novoStatus) {
   const proprietario = await ehProprietario(usuarioId);
   const donoDaReserva = reserva.userId === usuarioId;
 
-  let transicoesPermitidas;
-  if (proprietario) {
-    transicoesPermitidas = TRANSICOES_PROPRIETARIO;
-  } else if (donoDaReserva) {
-    transicoesPermitidas = TRANSICOES_CLIENTE;
-  } else {
-    throw new AppError("Você não tem permissão para alterar esta reserva.", 403);
-  }
+  const avaliacao = avaliarTransicaoStatus({
+    proprietario,
+    donoDaReserva,
+    novoStatus,
+    statusAtual: reserva.status,
+  });
 
-  if (!(novoStatus in transicoesPermitidas)) {
-    throw new AppError("Você não tem permissão para alterar esta reserva para este status.", 403);
-  }
-
-  const origensPermitidas = transicoesPermitidas[novoStatus];
-  if (!origensPermitidas.includes(reserva.status)) {
+  if (!avaliacao.permitido) {
+    if (avaliacao.motivo === "status_invalido") {
+      throw new AppError("Status inválido.");
+    }
+    if (avaliacao.motivo === "sem_acesso") {
+      throw new AppError("Você não tem permissão para alterar esta reserva.", 403);
+    }
+    if (avaliacao.motivo === "sem_permissao") {
+      throw new AppError(
+        "Você não tem permissão para alterar esta reserva para este status.",
+        403
+      );
+    }
     throw new AppError(
       "Esta alteração de status não é permitida para o estado atual da reserva.",
       409

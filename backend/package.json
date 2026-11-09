@@ -12,6 +12,7 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
+    "test": "vitest run",
     "lint": "eslint .",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -34,6 +35,7 @@
     "@eslint/js": "^10.0.1",
     "eslint": "^10.8.0",
     "globals": "^17.7.0",
-    "prisma": "^6.19.0"
+    "prisma": "^6.19.0",
+    "vitest": "^5.1.0"
   }
 }
