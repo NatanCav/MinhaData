@@ -3,6 +3,7 @@ import { AppError } from "../middlewares/AppError.js";
 import { cpfValido, normalizarCpf } from "../lib/cpf.js";
 import { buscarEspacoEntidadePorSlug } from "./espacosService.js";
 import { enviarEmail } from "./emailService.js";
+import { enviarWhatsapp } from "./whatsappService.js";
 
 const REGEX_DATA = /^\d{4}-\d{2}-\d{2}$/;
 const REGEX_HORARIO = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -325,6 +326,13 @@ export async function atualizarStatusReserva(usuarioId, id, novoStatus) {
         `Horário: ${reservaAtualizada.horarioInicio} às ${reservaAtualizada.horarioFim}\n\n` +
         "Equipe MinhaData."
     );
+
+    await enviarWhatsapp(reservaAtualizada.telefoneCliente, [
+      reservaAtualizada.nomeCliente,
+      reservaAtualizada.espaco.nome,
+      MENSAGENS_STATUS_CLIENTE[novoStatus],
+      `${reservaAtualizada.data} às ${reservaAtualizada.horarioInicio}`,
+    ]);
   }
 
   return paraApi(reservaAtualizada);
