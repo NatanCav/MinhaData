@@ -10,6 +10,7 @@ import Skeleton from "../../components/ui/Skeleton";
 import EmptyState from "../../components/ui/EmptyState";
 import Toast from "../../components/ui/Toast";
 import ImagemUpload from "../../components/ui/ImagemUpload";
+import ListaEditavel from "../../components/ui/ListaEditavel";
 import { useToast } from "../../hooks/useToast";
 import {
   atualizarEspaco,
@@ -17,6 +18,18 @@ import {
   getEspacoDoProprietarioPorSlug,
   uploadImagem,
 } from "../../services/espacosService";
+
+const REGEX_DIACRITICOS = /[̀-ͯ]/g;
+
+function gerarIdComodidade(label) {
+  return label
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(REGEX_DIACRITICOS, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
 
 const FORMULARIO_INICIAL = {
   nome: "",
@@ -28,6 +41,8 @@ const FORMULARIO_INICIAL = {
   capacidade: "",
   imagemCapa: "",
   galeria: [],
+  comodidades: [],
+  informacoes: [],
   disponivel: true,
 };
 
@@ -60,6 +75,10 @@ export default function PainelEspacoForm() {
           capacidade: String(espaco.capacidade),
           imagemCapa: espaco.imagemCapa || "",
           galeria: Array.isArray(espaco.galeria) ? espaco.galeria : [],
+          comodidades: Array.isArray(espaco.comodidades)
+            ? espaco.comodidades.map((comodidade) => comodidade.label)
+            : [],
+          informacoes: Array.isArray(espaco.informacoes) ? espaco.informacoes : [],
           disponivel: espaco.disponivel,
         });
       })
@@ -80,6 +99,28 @@ export default function PainelEspacoForm() {
     setFormulario((atual) => ({
       ...atual,
       galeria: atual.galeria.filter((_, i) => i !== indice),
+    }));
+  }
+
+  function adicionarComodidade(texto) {
+    setFormulario((atual) => ({ ...atual, comodidades: [...atual.comodidades, texto] }));
+  }
+
+  function removerComodidade(indice) {
+    setFormulario((atual) => ({
+      ...atual,
+      comodidades: atual.comodidades.filter((_, i) => i !== indice),
+    }));
+  }
+
+  function adicionarInformacao(texto) {
+    setFormulario((atual) => ({ ...atual, informacoes: [...atual.informacoes, texto] }));
+  }
+
+  function removerInformacao(indice) {
+    setFormulario((atual) => ({
+      ...atual,
+      informacoes: atual.informacoes.filter((_, i) => i !== indice),
     }));
   }
 
@@ -124,6 +165,11 @@ export default function PainelEspacoForm() {
       capacidade: Number(formulario.capacidade),
       imagemCapa: formulario.imagemCapa || undefined,
       galeria: formulario.galeria,
+      comodidades: formulario.comodidades.map((label) => ({
+        id: gerarIdComodidade(label),
+        label,
+      })),
+      informacoes: formulario.informacoes,
       disponivel: formulario.disponivel,
     };
 
@@ -289,6 +335,22 @@ export default function PainelEspacoForm() {
             }}
           />
         </div>
+
+        <ListaEditavel
+          label="Comodidades"
+          itens={formulario.comodidades}
+          onAdicionar={adicionarComodidade}
+          onRemover={removerComodidade}
+          placeholder="Ex.: Piscina, Churrasqueira, Garagem..."
+        />
+
+        <ListaEditavel
+          label="Informações importantes"
+          itens={formulario.informacoes}
+          onAdicionar={adicionarInformacao}
+          onRemover={removerInformacao}
+          placeholder="Ex.: Horário de funcionamento: 08:00 às 22:00"
+        />
 
         <Select
           id="disponivel"

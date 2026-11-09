@@ -99,6 +99,18 @@ function validarDadosEspaco(dados) {
   }
 }
 
+export function normalizarComodidades(comodidades) {
+  if (!Array.isArray(comodidades)) return [];
+  return comodidades
+    .filter((item) => item && typeof item.label === "string" && item.label.trim())
+    .map((item) => ({ id: String(item.id || item.label), label: item.label.trim() }));
+}
+
+export function normalizarInformacoes(informacoes) {
+  if (!Array.isArray(informacoes)) return [];
+  return informacoes.filter((item) => typeof item === "string" && item.trim()).map((item) => item.trim());
+}
+
 export async function criarEspaco(dados) {
   validarDadosEspaco(dados);
   const slug = await gerarSlugUnico(dados.nome);
@@ -115,6 +127,8 @@ export async function criarEspaco(dados) {
       capacidade: Number(dados.capacidade),
       imagemCapa: dados.imagemCapa || null,
       galeria: Array.isArray(dados.galeria) ? dados.galeria : [],
+      comodidades: normalizarComodidades(dados.comodidades),
+      informacoes: normalizarInformacoes(dados.informacoes),
       disponivel: dados.disponivel ?? true,
     },
   });
@@ -138,6 +152,8 @@ export async function atualizarEspaco(slug, dados) {
       capacidade: Number(dados.capacidade),
       imagemCapa: dados.imagemCapa || null,
       galeria: Array.isArray(dados.galeria) ? dados.galeria : [],
+      comodidades: normalizarComodidades(dados.comodidades),
+      informacoes: normalizarInformacoes(dados.informacoes),
       disponivel: dados.disponivel ?? true,
     },
   });
