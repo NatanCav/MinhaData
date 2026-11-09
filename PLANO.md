@@ -163,7 +163,7 @@ Status: `[ ]` pendente · `[~]` em andamento · `[x]` concluída
 ---
 
 ### Etapa 5 — Excluir espaço
-**Status:** [ ]
+**Status:** [x] Concluída em 2026-11-09
 
 **Objetivo:** permitir remover um espaço cadastrado incorretamente, com proteção para não quebrar o histórico de reservas.
 
@@ -181,6 +181,9 @@ Status: `[ ]` pendente · `[~]` em andamento · `[x]` concluída
 **Critério de conclusão:** excluir um espaço sem reservas funciona; tentar excluir um espaço com reservas retorna erro claro e não apaga nada.
 
 **Testes necessários:** teste manual cobrindo os dois cenários.
+
+**Notas de execução:**
+- Ambos os cenários testados em produção com conta descartável: exclusão de espaço sem reservas (204, confirmado sumir da API) e tentativa de exclusão de espaço com reserva associada (bloqueado com 409 e mensagem explicando a alternativa de marcar como indisponível; espaço preservado). Commit: `be60b16`.
 
 ---
 
