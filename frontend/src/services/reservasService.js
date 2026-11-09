@@ -54,3 +54,10 @@ export async function recusarReserva(id) {
 export async function cancelarReservaProprietario(id) {
   return requisitar(`/${id}/status`, { method: "PATCH", body: { status: "cancelada" } });
 }
+
+export async function atualizarObservacoesProprietario(id, observacoes) {
+  return requisitar(`/${id}/observacoes-proprietario`, {
+    method: "PATCH",
+    body: { observacoes },
+  });
+}

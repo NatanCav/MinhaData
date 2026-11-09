@@ -96,6 +96,7 @@ function paraApi(reserva) {
     emailCliente: reserva.emailCliente,
     cpfCliente: reserva.cpfCliente,
     observacoes: reserva.observacoes,
+    observacoesProprietario: reserva.observacoesProprietario,
     createdAt: reserva.createdAt,
     espaco: {
       id: reserva.espaco.id,
@@ -334,6 +335,30 @@ export async function atualizarStatusReserva(usuarioId, id, novoStatus) {
       `${reservaAtualizada.data} às ${reservaAtualizada.horarioInicio}`,
     ]);
   }
+
+  return paraApi(reservaAtualizada);
+}
+
+export async function atualizarObservacoesProprietario(usuarioId, id, observacoes) {
+  if (!(await ehProprietario(usuarioId))) {
+    throw new AppError("Você não tem permissão para alterar esta reserva.", 403);
+  }
+
+  const idNumerico = Number(id);
+  if (!Number.isInteger(idNumerico)) {
+    throw new AppError("Identificador de reserva inválido.");
+  }
+
+  const reserva = await prisma.reserva.findUnique({ where: { id: idNumerico } });
+  if (!reserva) {
+    throw new AppError("Reserva não encontrada.", 404);
+  }
+
+  const reservaAtualizada = await prisma.reserva.update({
+    where: { id: idNumerico },
+    data: { observacoesProprietario: String(observacoes ?? "").trim() || null },
+    include: { espaco: true },
+  });
 
   return paraApi(reservaAtualizada);
 }

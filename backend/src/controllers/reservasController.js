@@ -48,3 +48,16 @@ export async function atualizarStatus(req, res, next) {
     next(erro);
   }
 }
+
+export async function atualizarObservacoesProprietario(req, res, next) {
+  try {
+    const reserva = await reservasService.atualizarObservacoesProprietario(
+      req.usuarioId,
+      req.params.id,
+      req.body?.observacoes
+    );
+    res.json(reserva);
+  } catch (erro) {
+    next(erro);
+  }
+}

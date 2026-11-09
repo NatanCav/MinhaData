@@ -11,6 +11,7 @@ import { IconeCalendario, IconeRelogio } from "../../components/ui/Icones";
 import { useToast } from "../../hooks/useToast";
 import {
   aprovarReserva,
+  atualizarObservacoesProprietario,
   cancelarReservaProprietario,
   getReservasDoProprietario,
   podeCancelarReserva,
@@ -39,6 +40,52 @@ function formatarData(data) {
     month: "short",
     year: "numeric",
   });
+}
+
+function ObservacaoProprietario({ reserva, onSalvo, onErro }) {
+  const [valor, setValor] = useState(reserva.observacoesProprietario || "");
+  const [salvando, setSalvando] = useState(false);
+
+  const alterado = valor !== (reserva.observacoesProprietario || "");
+
+  async function handleSalvar() {
+    setSalvando(true);
+    try {
+      const reservaAtualizada = await atualizarObservacoesProprietario(reserva.id, valor);
+      onSalvo(reservaAtualizada);
+    } catch (erro) {
+      onErro(erro.message || "Não foi possível salvar a observação.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2 border-t border-gray-100 pt-3">
+      <label htmlFor={`observacao-${reserva.id}`} className="text-xs font-medium text-gray-500">
+        Observação (só você vê — ex.: valor combinado, sinal, etc.)
+      </label>
+      <textarea
+        id={`observacao-${reserva.id}`}
+        rows={2}
+        value={valor}
+        onChange={(evento) => setValor(evento.target.value)}
+        placeholder="Ex.: Cobrado R$ 850 (combinado direto com o cliente)."
+        className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+      />
+      {alterado && (
+        <Button
+          variante="secundario"
+          carregando={salvando}
+          disabled={salvando}
+          onClick={handleSalvar}
+          className="self-end"
+        >
+          Salvar observação
+        </Button>
+      )}
+    </div>
+  );
 }
 
 function EsqueletoReserva() {
@@ -165,10 +212,8 @@ export default function PainelReservas() {
             const emAndamento = acaoEmAndamentoId === reserva.id;
 
             return (
-              <Card
-                key={reserva.id}
-                className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-              >
+              <Card key={reserva.id} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-col gap-2">
                   <div className="flex flex-wrap items-center gap-3">
                     <p className="text-lg font-bold text-gray-800">
@@ -246,6 +291,18 @@ export default function PainelReservas() {
                     </Button>
                   )}
                 </div>
+              </div>
+
+              <ObservacaoProprietario
+                reserva={reserva}
+                onSalvo={(reservaAtualizada) => {
+                  setReservas((atual) =>
+                    atual.map((item) => (item.id === reservaAtualizada.id ? reservaAtualizada : item))
+                  );
+                  mostrarToast("Observação salva.", "sucesso");
+                }}
+                onErro={(mensagem) => mostrarToast(mensagem, "erro")}
+              />
               </Card>
             );
           })}
