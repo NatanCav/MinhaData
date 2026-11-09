@@ -109,7 +109,7 @@ Status: `[ ]` pendente · `[~]` em andamento · `[x]` concluída
 ---
 
 ### Etapa 3 — Testes automatizados básicos
-**Status:** [ ]
+**Status:** [x] Concluída em 2026-11-08
 
 **Objetivo:** estabelecer um mínimo de rede de segurança para as regras de negócio mais sensíveis, já que hoje não existe nenhum teste automatizado.
 
@@ -127,6 +127,11 @@ Status: `[ ]` pendente · `[~]` em andamento · `[x]` concluída
 **Critério de conclusão:** `npm test` roda e passa no backend; cobre pelo menos os quatro módulos listados.
 
 **Testes necessários:** os próprios testes automatizados criados nesta etapa.
+
+**Notas de execução:**
+- Para tornar a lógica testável sem banco de dados, extraídas três funções puras, sem mudar nenhum comportamento: `gerarSlugBase` (já existia, só passou a ser exportada), `horariosSeSobrepoe` e `avaliarTransicaoStatus` (ambas extraídas de dentro de funções que já acessavam o Prisma).
+- 20 testes (`npm test`) cobrindo CPF, geração de slug, conflito de horário e as 4 variações de autorização de transição de status.
+- Refactor validado como 100% comportamento-preservando com teste de regressão manual em produção após o deploy: mesmo código de erro e mesma mensagem em cenários de conflito de horário e de transição de status não permitida. Commit: `061bec0`.
 
 ---
 
