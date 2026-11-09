@@ -14,6 +14,7 @@ import Configuracoes from "./pages/Configuracoes/Configuracoes.jsx";
 import MinhasReservas from "./pages/MinhasReservas/MinhasReservas.jsx";
 import Painel from "./pages/Painel/Painel.jsx";
 import PainelReservas from "./pages/PainelReservas/PainelReservas.jsx";
+import PainelCalendario from "./pages/PainelCalendario/PainelCalendario.jsx";
 import PainelEspacos from "./pages/PainelEspacos/PainelEspacos.jsx";
 import PainelEspacoForm from "./pages/PainelEspacoForm/PainelEspacoForm.jsx";
 import { ReservaProvider } from "./context/ReservaContext.jsx";
@@ -79,6 +80,7 @@ function App() {
               >
                 <Route index element={<Painel />} />
                 <Route path="reservas" element={<PainelReservas />} />
+                <Route path="calendario" element={<PainelCalendario />} />
                 <Route path="espacos" element={<PainelEspacos />} />
                 <Route path="espacos/novo" element={<PainelEspacoForm />} />
                 <Route path="espacos/:slug/editar" element={<PainelEspacoForm />} />

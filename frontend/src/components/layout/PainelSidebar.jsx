@@ -10,6 +10,7 @@ import {
 const ITENS_NAVEGACAO = [
   { label: "Painel", to: "/gestao", icone: IconePainel, fim: true },
   { label: "Reservas", to: "/gestao/reservas", icone: IconeCalendario },
+  { label: "Calendário", to: "/gestao/calendario", icone: IconeCalendario },
   { label: "Espaços", to: "/gestao/espacos", icone: IconeEspacos },
 ];
 
