@@ -160,3 +160,17 @@ export async function atualizarEspaco(slug, dados) {
 
   return paraApi(espaco);
 }
+
+export async function excluirEspaco(slug) {
+  const espaco = await buscarEspacoEntidadePorSlug(slug);
+
+  const totalReservas = await prisma.reserva.count({ where: { espacoId: espaco.id } });
+  if (totalReservas > 0) {
+    throw new AppError(
+      "Este espaço possui reservas associadas e não pode ser excluído. Marque-o como indisponível em vez de excluir.",
+      409
+    );
+  }
+
+  await prisma.espaco.delete({ where: { id: espaco.id } });
+}

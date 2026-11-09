@@ -6,7 +6,9 @@ import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Skeleton from "../../components/ui/Skeleton";
 import EmptyState from "../../components/ui/EmptyState";
-import { getEspacosDoProprietario } from "../../services/espacosService";
+import Toast from "../../components/ui/Toast";
+import { useToast } from "../../hooks/useToast";
+import { excluirEspaco, getEspacosDoProprietario } from "../../services/espacosService";
 
 function EsqueletoEspaco() {
   return (
@@ -24,6 +26,9 @@ export default function PainelEspacos() {
   const [espacos, setEspacos] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(null);
+  const [excluindoSlug, setExcluindoSlug] = useState(null);
+
+  const { toast, mostrarToast, fecharToast } = useToast();
 
   useEffect(() => {
     getEspacosDoProprietario()
@@ -31,6 +36,24 @@ export default function PainelEspacos() {
       .catch(() => setErro("Não foi possível carregar os espaços."))
       .finally(() => setCarregando(false));
   }, []);
+
+  async function handleExcluir(espaco) {
+    const confirmado = window.confirm(
+      `Tem certeza que deseja excluir "${espaco.nome}"? Esta ação não pode ser desfeita.`
+    );
+    if (!confirmado) return;
+
+    setExcluindoSlug(espaco.slug);
+    try {
+      await excluirEspaco(espaco.slug);
+      setEspacos((atual) => atual.filter((item) => item.slug !== espaco.slug));
+      mostrarToast("Espaço excluído com sucesso.", "sucesso");
+    } catch (erroExclusao) {
+      mostrarToast(erroExclusao.message || "Não foi possível excluir o espaço.", "erro");
+    } finally {
+      setExcluindoSlug(null);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -90,18 +113,35 @@ export default function PainelEspacos() {
                 </p>
               </div>
 
-              <Button
-                as={Link}
-                to={`/gestao/espacos/${espaco.slug}/editar`}
-                variante="secundario"
-                className="shrink-0"
-              >
-                Editar
-              </Button>
+              <div className="flex shrink-0 gap-2">
+                <Button
+                  as={Link}
+                  to={`/gestao/espacos/${espaco.slug}/editar`}
+                  variante="secundario"
+                >
+                  Editar
+                </Button>
+                <Button
+                  variante="secundario"
+                  className="text-red-500 hover:text-red-600"
+                  disabled={excluindoSlug === espaco.slug}
+                  carregando={excluindoSlug === espaco.slug}
+                  onClick={() => handleExcluir(espaco)}
+                >
+                  Excluir
+                </Button>
+              </div>
             </Card>
           ))}
         </div>
       )}
+
+      <Toast
+        mensagem={toast.mensagem}
+        tom={toast.tom}
+        visivel={toast.visivel}
+        onFechar={fecharToast}
+      />
     </div>
   );
 }

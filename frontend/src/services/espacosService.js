@@ -38,6 +38,18 @@ export async function criarEspaco(dados) {
   return corpo;
 }
 
+export async function excluirEspaco(slug) {
+  const res = await fetch(`/api/espacos/${slug}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const corpo = await res.json().catch(() => null);
+    throw new Error(corpo?.mensagem || "Não foi possível excluir o espaço.");
+  }
+}
+
 export async function uploadImagem(arquivo) {
   const formData = new FormData();
   formData.append("imagem", arquivo);

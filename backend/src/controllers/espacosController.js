@@ -35,3 +35,12 @@ export async function atualizar(req, res, next) {
     next(erro);
   }
 }
+
+export async function excluir(req, res, next) {
+  try {
+    await espacosService.excluirEspaco(req.params.slug);
+    res.status(204).end();
+  } catch (erro) {
+    next(erro);
+  }
+}
