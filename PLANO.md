@@ -136,7 +136,7 @@ Status: `[ ]` pendente · `[~]` em andamento · `[x]` concluída
 ---
 
 ### Etapa 4 — Comodidades e informações do espaço no formulário
-**Status:** [ ]
+**Status:** [x] Concluída em 2026-11-09
 
 **Objetivo:** permitir cadastrar as comodidades reais do espaço (piscina, churrasqueira, cozinha equipada, sinuca, banheiros, garagem) e as informações/regras pela própria interface, sem precisar de SQL manual.
 
@@ -154,6 +154,11 @@ Status: `[ ]` pendente · `[~]` em andamento · `[x]` concluída
 **Critério de conclusão:** cadastrar/editar um espaço com comodidades e informações reais, confirmar que aparecem corretamente na página pública de detalhe do espaço (`DetalheEspaco.jsx`).
 
 **Testes necessários:** teste manual no site publicado.
+
+**Notas de execução:**
+- `comodidades` guardadas como editor de texto livre no formulário (o id interno é gerado automaticamente a partir do label, não é algo que o proprietário precisa preencher).
+- Adicionadas também `normalizarComodidades`/`normalizarInformacoes` (funções puras, com testes) no backend para sanitizar a entrada antes de gravar.
+- Testado em produção com conta descartável: criar espaço com as comodidades reais do espaço da família (piscina, churrasqueira, cozinha equipada, mesa de sinuca, 2 banheiros, garagem) e informações — confirmado que `GET /api/espacos/:slug` (usado pela página pública) devolve exatamente no formato que `DetalheEspaco.jsx` já esperava. Commit: `83114df`.
 
 ---
 
