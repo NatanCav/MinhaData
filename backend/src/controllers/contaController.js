@@ -60,9 +60,12 @@ export async function confirmarVerificacaoTelefone(req, res, next) {
   }
 }
 
-export async function atualizarWhatsapp(req, res, next) {
+export async function atualizarContatosWhatsapp(req, res, next) {
   try {
-    const resultado = await contaService.atualizarWhatsappContato(req.usuarioId, req.body?.whatsapp);
+    const resultado = await contaService.atualizarContatosWhatsapp(
+      req.usuarioId,
+      req.body?.contatos
+    );
     res.json(resultado);
   } catch (erro) {
     next(erro);

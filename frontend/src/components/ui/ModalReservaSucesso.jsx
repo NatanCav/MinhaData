@@ -19,9 +19,10 @@ export default function ModalReservaSucesso({
   datas,
   horario,
   codigoReserva,
-  linkWhatsapp,
+  linksWhatsapp,
   onFechar,
 }) {
+  const temWhatsapp = Array.isArray(linksWhatsapp) && linksWhatsapp.length > 0;
   const [visivel, setVisivel] = useState(false);
   const painelRef = useRef(null);
 
@@ -108,20 +109,32 @@ export default function ModalReservaSucesso({
           )}
         </div>
 
-        {linkWhatsapp && (
-          <a
-            href={linkWhatsapp}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
-          >
-            Enviar confirmação pelo WhatsApp
-          </a>
+        {temWhatsapp && (
+          <div className="mt-6 flex flex-col gap-2">
+            {linksWhatsapp.length > 1 && (
+              <p className="text-center text-xs font-medium text-gray-500">
+                Enviar confirmação pelo WhatsApp para:
+              </p>
+            )}
+            {linksWhatsapp.map((link) => (
+              <a
+                key={link.nome}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+              >
+                {linksWhatsapp.length > 1
+                  ? link.nome
+                  : "Enviar confirmação pelo WhatsApp"}
+              </a>
+            ))}
+          </div>
         )}
 
         <Button
           onClick={fechar}
-          variante={linkWhatsapp ? "secundario" : "primario"}
+          variante={temWhatsapp ? "secundario" : "primario"}
           className="mt-3 w-full"
         >
           Fechar

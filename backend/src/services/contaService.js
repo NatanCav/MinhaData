@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import crypto from "node:crypto";
 import QRCode from "qrcode";
 import { prisma } from "../lib/prisma.js";
 import { AppError } from "../middlewares/AppError.js";
@@ -196,16 +197,33 @@ export async function confirmarVerificacaoTelefone(userId, codigo) {
   return { mensagem: "Número de celular confirmado com sucesso." };
 }
 
-export async function atualizarWhatsappContato(userId, whatsapp) {
-  const digitos = String(whatsapp ?? "").replace(/\D/g, "");
-  if (!REGEX_TELEFONE.test(digitos)) {
-    throw new AppError("Informe um número de WhatsApp válido, com DDD.");
+export async function atualizarContatosWhatsapp(userId, contatos) {
+  if (!Array.isArray(contatos)) {
+    throw new AppError("Lista de contatos inválida.");
   }
+
+  const normalizados = contatos.map((contato) => {
+    const nome = String(contato?.nome ?? "").trim();
+    const digitos = String(contato?.numero ?? "").replace(/\D/g, "");
+
+    if (!nome) {
+      throw new AppError("Informe um nome para cada contato de WhatsApp.");
+    }
+    if (!REGEX_TELEFONE.test(digitos)) {
+      throw new AppError(`Informe um número de WhatsApp válido para "${nome}", com DDD.`);
+    }
+
+    return {
+      id: contato?.id || crypto.randomUUID(),
+      nome,
+      numero: digitos,
+    };
+  });
 
   await prisma.user.update({
     where: { id: userId },
-    data: { whatsappContato: digitos },
+    data: { contatosWhatsapp: normalizados },
   });
 
-  return { mensagem: "Número de WhatsApp atualizado com sucesso." };
+  return { mensagem: "Contatos de WhatsApp atualizados com sucesso.", contatos: normalizados };
 }

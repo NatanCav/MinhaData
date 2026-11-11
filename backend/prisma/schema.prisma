@@ -28,7 +28,7 @@ model User {
   telefoneVerificado Boolean @default(false)
   tipoConta TipoConta @default(PF)
   role      Role      @default(CLIENTE)
-  whatsappContato String?
+  contatosWhatsapp Json @default("[]")
 
   doisFatoresAtivo         Boolean @default(false)
   doisFatoresSecret        String?

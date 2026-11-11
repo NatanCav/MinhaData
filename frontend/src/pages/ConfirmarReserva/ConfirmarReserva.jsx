@@ -10,7 +10,7 @@ import EmptyState from "../../components/ui/EmptyState";
 import ModalReservaSucesso from "../../components/ui/ModalReservaSucesso";
 import { IconeCalendario, IconeRelogio } from "../../components/ui/Icones";
 import { criarReserva } from "../../services/reservasService";
-import { getWhatsappContato } from "../../services/configService";
+import { getContatosWhatsapp } from "../../services/configService";
 
 function normalizarCpf(cpf) {
   return String(cpf ?? "").replace(/\D/g, "");
@@ -65,7 +65,7 @@ export default function ConfirmarReserva() {
   const [enviando, setEnviando] = useState(false);
   const [erroEnvio, setErroEnvio] = useState(null);
   const [reservasConfirmadas, setReservasConfirmadas] = useState(null);
-  const [linkWhatsapp, setLinkWhatsapp] = useState(null);
+  const [linksWhatsapp, setLinksWhatsapp] = useState(null);
 
   if (!reserva) {
     return (
@@ -120,16 +120,22 @@ export default function ConfirmarReserva() {
       setReservasConfirmadas(reservasCriadas);
       setModalAberto(true);
 
-      const whatsappProprietario = await getWhatsappContato();
-      if (whatsappProprietario) {
+      const contatosWhatsapp = await getContatosWhatsapp();
+      if (contatosWhatsapp.length > 0) {
         const datasFormatadas = datas.map(formatarData).join(", ");
         const mensagem =
           `Olá! Acabei de reservar o espaço *${espaco.nome}* ` +
           `para ${datas.length > 1 ? "as datas" : "o dia"} ${datasFormatadas}, ` +
           `${reservasCriadas[0].horarioInicio} às ${reservasCriadas[0].horarioFim}. ` +
           `Meu nome: ${nome}.`;
-        const numero = formatarNumeroWhatsapp(whatsappProprietario);
-        setLinkWhatsapp(`https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`);
+        setLinksWhatsapp(
+          contatosWhatsapp.map((contato) => ({
+            nome: contato.nome,
+            url: `https://wa.me/${formatarNumeroWhatsapp(contato.numero)}?text=${encodeURIComponent(
+              mensagem
+            )}`,
+          }))
+        );
       }
     } catch (erro) {
       setErroEnvio(erro.message || "Não foi possível concluir a reserva.");
@@ -140,7 +146,7 @@ export default function ConfirmarReserva() {
 
   function handleFecharModal() {
     setModalAberto(false);
-    setLinkWhatsapp(null);
+    setLinksWhatsapp(null);
     limparReserva();
     navigate("/");
   }
@@ -291,7 +297,7 @@ export default function ConfirmarReserva() {
           datas={reservasConfirmadas.map((reservaCriada) => reservaCriada.data)}
           horario={horarioExibido}
           codigoReserva={reservasConfirmadas[0].id}
-          linkWhatsapp={linkWhatsapp}
+          linksWhatsapp={linksWhatsapp}
           onFechar={handleFecharModal}
         />
       )}

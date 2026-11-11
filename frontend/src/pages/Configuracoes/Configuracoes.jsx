@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../../context/useAuth";
 import Container from "../../components/ui/Container";
 import SectionTitle from "../../components/ui/SectionTitle";
@@ -8,6 +8,7 @@ import Badge from "../../components/ui/Badge";
 import Input from "../../components/ui/Input";
 import PasswordInput from "../../components/ui/PasswordInput";
 import * as contaService from "../../services/contaService";
+import { getContatosWhatsapp } from "../../services/configService";
 
 const TAMANHO_MINIMO_SENHA = 8;
 const REGEX_SENHA_FORTE = /^(?=.*[A-Za-z])(?=.*\d).+$/;
@@ -435,22 +436,42 @@ function SecaoTelefone() {
 }
 
 function SecaoWhatsappContato() {
-  const { usuario, atualizarUsuario } = useAuth();
-  const [whatsapp, setWhatsapp] = useState(usuario.whatsappContato || "");
+  const [contatos, setContatos] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+  const [novoNome, setNovoNome] = useState("");
+  const [novoNumero, setNovoNumero] = useState("");
   const [erro, setErro] = useState(null);
   const [mensagem, setMensagem] = useState(null);
   const [enviando, setEnviando] = useState(false);
 
-  async function handleSubmit(evento) {
-    evento.preventDefault();
+  useEffect(() => {
+    getContatosWhatsapp()
+      .then((dados) => setContatos(dados))
+      .finally(() => setCarregando(false));
+  }, []);
+
+  function adicionarContato() {
+    if (!novoNome.trim() || !novoNumero.trim()) return;
+    setContatos((atual) => [
+      ...atual,
+      { id: crypto.randomUUID(), nome: novoNome.trim(), numero: novoNumero.trim() },
+    ]);
+    setNovoNome("");
+    setNovoNumero("");
+  }
+
+  function removerContato(id) {
+    setContatos((atual) => atual.filter((contato) => contato.id !== id));
+  }
+
+  async function handleSalvar() {
     setErro(null);
     setMensagem(null);
-
     setEnviando(true);
     try {
-      const resultado = await contaService.atualizarWhatsapp(whatsapp);
+      const resultado = await contaService.atualizarContatosWhatsapp(contatos);
+      setContatos(resultado.contatos);
       setMensagem(resultado.mensagem);
-      atualizarUsuario({ whatsappContato: whatsapp.replace(/\D/g, "") });
     } catch (erroRequisicao) {
       setErro(erroRequisicao.message);
     } finally {
@@ -460,25 +481,64 @@ function SecaoWhatsappContato() {
 
   return (
     <Card className="flex flex-col gap-4">
-      <SectionTitle subtitulo="Para onde o cliente envia a confirmação da reserva pelo WhatsApp, assim que reserva um espaço.">
-        WhatsApp para confirmação de reservas
+      <SectionTitle subtitulo="Para quem o cliente pode enviar a confirmação da reserva pelo WhatsApp, assim que reserva um espaço. Cadastre um contato para cada pessoa que atende (ex.: você e seu cônjuge).">
+        Contatos de WhatsApp para reservas
       </SectionTitle>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      {!carregando && contatos.length > 0 && (
+        <ul className="flex flex-col gap-2">
+          {contatos.map((contato) => (
+            <li
+              key={contato.id}
+              className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            >
+              <span className="text-gray-800">
+                {contato.nome} <span className="text-gray-400">· {contato.numero}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => removerContato(contato.id)}
+                aria-label={`Remover ${contato.nome}`}
+                className="text-red-500 hover:text-red-600"
+              >
+                Remover
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
         <Input
-          id="whatsappContato"
+          id="novoContatoNome"
+          label="Nome (ex.: Mãe, Pai)"
+          value={novoNome}
+          onChange={(evento) => setNovoNome(evento.target.value)}
+        />
+        <Input
+          id="novoContatoNumero"
           label="Número de WhatsApp (com DDD)"
           type="tel"
           placeholder="11999999999"
-          value={whatsapp}
-          onChange={(evento) => setWhatsapp(evento.target.value)}
+          value={novoNumero}
+          onChange={(evento) => setNovoNumero(evento.target.value)}
         />
-        {erro && <p className="text-sm text-red-500">{erro}</p>}
-        {mensagem && <p className="text-sm text-emerald-700">{mensagem}</p>}
-        <Button type="submit" carregando={enviando} className="w-full sm:w-auto">
-          Salvar número
+        <Button type="button" variante="secundario" onClick={adicionarContato}>
+          Adicionar
         </Button>
-      </form>
+      </div>
+
+      {erro && <p className="text-sm text-red-500">{erro}</p>}
+      {mensagem && <p className="text-sm text-emerald-700">{mensagem}</p>}
+
+      <Button
+        type="button"
+        onClick={handleSalvar}
+        carregando={enviando}
+        className="w-full sm:w-auto"
+      >
+        Salvar contatos
+      </Button>
     </Card>
   );
 }

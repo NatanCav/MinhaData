@@ -1,10 +1,10 @@
 import { prisma } from "../lib/prisma.js";
 
-export async function obterWhatsappContato() {
+export async function obterContatosWhatsapp() {
   const proprietario = await prisma.user.findFirst({
     where: { role: "PROPRIETARIO" },
-    select: { whatsappContato: true },
+    select: { contatosWhatsapp: true },
   });
 
-  return { whatsapp: proprietario?.whatsappContato || null };
+  return { contatos: Array.isArray(proprietario?.contatosWhatsapp) ? proprietario.contatosWhatsapp : [] };
 }

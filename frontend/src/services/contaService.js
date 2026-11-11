@@ -42,6 +42,6 @@ export async function confirmarVerificacaoTelefone(codigo) {
   return requisitar("/telefone/confirmar", { method: "POST", body: { codigo } });
 }
 
-export async function atualizarWhatsapp(whatsapp) {
-  return requisitar("/whatsapp", { method: "PATCH", body: { whatsapp } });
+export async function atualizarContatosWhatsapp(contatos) {
+  return requisitar("/whatsapp", { method: "PATCH", body: { contatos } });
 }
