@@ -144,6 +144,7 @@ Status: `[x]` concluída · `[ ]` pendente
 ---
 
 ### Etapa 1 — Modelagem multi-tenant
+**Status:** [x] Concluída em 2026-11-22
 - **Objetivo:** criar a entidade `Organization` e ligar `Espaco` a ela.
 - **Problema que resolve:** hoje não existe nenhuma forma de saber "a quem pertence este espaço" — pré-requisito de tudo que vem depois.
 - **Funcionalidades envolvidas:** nenhuma funcionalidade de usuário muda ainda; é só fundação de dados.

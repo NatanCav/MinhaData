@@ -18,6 +18,13 @@ enum Role {
   PROPRIETARIO
 }
 
+enum StatusOrganizacao {
+  ativa
+  pendente
+  suspensa
+  cancelada
+}
+
 model User {
   id        Int       @id @default(autoincrement())
   nome      String
@@ -42,6 +49,21 @@ model User {
   refreshTokens          RefreshToken[]
   tokensRecuperacaoSenha PasswordResetToken[]
   verificacoesTelefone   VerificacaoTelefone[]
+  organizacoes           Organization[]
+}
+
+model Organization {
+  id        Int               @id @default(autoincrement())
+  nome      String
+  status    StatusOrganizacao @default(ativa)
+  ownerId   Int
+  owner     User              @relation(fields: [ownerId], references: [id])
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  espacos Espaco[]
+
+  @@index([ownerId])
 }
 
 model RefreshToken {
@@ -98,12 +120,15 @@ model Espaco {
   comodidades              Json     @default("[]")
   informacoes              Json     @default("[]")
   disponivel               Boolean  @default(true)
+  organizationId           Int
+  organization             Organization @relation(fields: [organizationId], references: [id])
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
 
   reservas Reserva[]
 
   @@index([tipo])
+  @@index([organizationId])
 }
 
 enum StatusReserva {
