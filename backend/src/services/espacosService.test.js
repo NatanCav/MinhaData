@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { gerarSlugBase, normalizarComodidades, normalizarInformacoes } from "./espacosService.js";
+import {
+  gerarSlugBase,
+  normalizarComodidades,
+  normalizarGaleria,
+  normalizarInformacoes,
+} from "./espacosService.js";
 
 describe("gerarSlugBase", () => {
   it("converte nome para minúsculas separadas por hífen", () => {
@@ -59,5 +64,42 @@ describe("normalizarInformacoes", () => {
 
   it("retorna lista vazia quando a entrada não é um array", () => {
     expect(normalizarInformacoes(undefined)).toEqual([]);
+  });
+});
+
+describe("normalizarGaleria", () => {
+  it("converte o formato antigo (string = URL de imagem) para o novo formato", () => {
+    expect(normalizarGaleria(["https://exemplo.com/foto.jpg"])).toEqual([
+      { url: "https://exemplo.com/foto.jpg", tipo: "imagem" },
+    ]);
+  });
+
+  it("mantém itens já no formato novo, aceitando imagem e vídeo", () => {
+    expect(
+      normalizarGaleria([
+        { url: "https://exemplo.com/foto.jpg", tipo: "imagem" },
+        { url: "https://exemplo.com/video.mp4", tipo: "video" },
+      ])
+    ).toEqual([
+      { url: "https://exemplo.com/foto.jpg", tipo: "imagem" },
+      { url: "https://exemplo.com/video.mp4", tipo: "video" },
+    ]);
+  });
+
+  it("trata tipo ausente ou inválido como imagem", () => {
+    expect(normalizarGaleria([{ url: "https://exemplo.com/a.jpg" }])).toEqual([
+      { url: "https://exemplo.com/a.jpg", tipo: "imagem" },
+    ]);
+    expect(normalizarGaleria([{ url: "https://exemplo.com/a.jpg", tipo: "gif" }])).toEqual([
+      { url: "https://exemplo.com/a.jpg", tipo: "imagem" },
+    ]);
+  });
+
+  it("descarta itens vazios ou inválidos", () => {
+    expect(normalizarGaleria(["", "   ", null, {}, { tipo: "video" }])).toEqual([]);
+  });
+
+  it("retorna lista vazia quando a entrada não é um array", () => {
+    expect(normalizarGaleria(undefined)).toEqual([]);
   });
 });

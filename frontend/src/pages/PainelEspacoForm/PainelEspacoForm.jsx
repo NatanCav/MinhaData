@@ -29,6 +29,14 @@ function gerarIdComodidade(label) {
     .replace(/(^-|-$)/g, "");
 }
 
+// Aceita tanto o formato antigo da galeria (string = URL de imagem) quanto
+// o novo ({url, tipo}), pra carregar espaços cadastrados antes do suporte a
+// vídeo sem quebrar.
+function normalizarItemGaleria(item) {
+  if (typeof item === "string") return { url: item, tipo: "imagem" };
+  return { url: item.url, tipo: item.tipo === "video" ? "video" : "imagem" };
+}
+
 const FORMULARIO_INICIAL = {
   nome: "",
   tipo: "",
@@ -70,7 +78,7 @@ export default function PainelEspacoForm() {
           unidadePreco: espaco.unidadePreco,
           capacidade: String(espaco.capacidade),
           imagemCapa: espaco.imagemCapa || "",
-          galeria: Array.isArray(espaco.galeria) ? espaco.galeria : [],
+          galeria: Array.isArray(espaco.galeria) ? espaco.galeria.map(normalizarItemGaleria) : [],
           comodidades: Array.isArray(espaco.comodidades)
             ? espaco.comodidades.map((comodidade) => comodidade.label)
             : [],
@@ -87,8 +95,8 @@ export default function PainelEspacoForm() {
     setErros((atual) => ({ ...atual, [campo]: null }));
   }
 
-  function adicionarNaGaleria(url) {
-    setFormulario((atual) => ({ ...atual, galeria: [...atual.galeria, url] }));
+  function adicionarNaGaleria(item) {
+    setFormulario((atual) => ({ ...atual, galeria: [...atual.galeria, item] }));
   }
 
   function removerDaGaleria(indice) {
@@ -297,27 +305,35 @@ export default function PainelEspacoForm() {
           label="Imagem de capa"
           valor={formulario.imagemCapa}
           onEnviar={async (arquivo) => {
-            const url = await uploadImagem(arquivo);
+            const { url } = await uploadImagem(arquivo);
             atualizarCampo("imagemCapa", url);
           }}
         />
 
         <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium text-gray-700">Galeria de fotos</p>
+          <p className="text-sm font-medium text-gray-700">Galeria de fotos e vídeos</p>
 
           {formulario.galeria.length > 0 && (
             <div className="flex flex-wrap gap-3">
-              {formulario.galeria.map((url, indice) => (
-                <div key={url} className="relative">
-                  <img
-                    src={url}
-                    alt=""
-                    className="h-24 w-24 rounded-lg border border-gray-200 object-cover"
-                  />
+              {formulario.galeria.map((item, indice) => (
+                <div key={item.url} className="relative">
+                  {item.tipo === "video" ? (
+                    <video
+                      src={item.url}
+                      controls
+                      className="h-24 w-24 rounded-lg border border-gray-200 object-cover"
+                    />
+                  ) : (
+                    <img
+                      src={item.url}
+                      alt=""
+                      className="h-24 w-24 rounded-lg border border-gray-200 object-cover"
+                    />
+                  )}
                   <button
                     type="button"
                     onClick={() => removerDaGaleria(indice)}
-                    aria-label="Remover imagem da galeria"
+                    aria-label="Remover item da galeria"
                     className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-white text-red-500 shadow-sm hover:bg-red-50"
                   >
                     ×
@@ -328,9 +344,10 @@ export default function PainelEspacoForm() {
           )}
 
           <ImagemUpload
+            aceitarVideo
             onEnviar={async (arquivo) => {
-              const url = await uploadImagem(arquivo);
-              adicionarNaGaleria(url);
+              const resultado = await uploadImagem(arquivo);
+              adicionarNaGaleria(resultado);
             }}
           />
         </div>

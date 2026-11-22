@@ -1,15 +1,15 @@
 import multer from "multer";
-import { enviarImagem } from "../services/uploadService.js";
+import { enviarArquivo } from "../services/uploadService.js";
 import { AppError } from "../middlewares/AppError.js";
 
-const TAMANHO_MAXIMO_BYTES = 5 * 1024 * 1024;
+const TAMANHO_MAXIMO_BYTES = 50 * 1024 * 1024;
 
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: TAMANHO_MAXIMO_BYTES },
   fileFilter(_req, file, callback) {
-    if (!file.mimetype.startsWith("image/")) {
-      return callback(new AppError("Envie apenas arquivos de imagem.", 400));
+    if (!file.mimetype.startsWith("image/") && !file.mimetype.startsWith("video/")) {
+      return callback(new AppError("Envie apenas arquivos de imagem ou vídeo.", 400));
     }
     callback(null, true);
   },
@@ -20,8 +20,8 @@ export function middlewareUpload(req, res, next) {
     if (erro instanceof multer.MulterError) {
       const mensagem =
         erro.code === "LIMIT_FILE_SIZE"
-          ? "Imagem muito grande (máximo 5MB)."
-          : "Não foi possível enviar a imagem.";
+          ? "Arquivo muito grande (máximo 50MB)."
+          : "Não foi possível enviar o arquivo.";
       return next(new AppError(mensagem, 400));
     }
     if (erro) return next(erro);
@@ -35,8 +35,8 @@ export async function enviar(req, res, next) {
       throw new AppError("Nenhum arquivo enviado.", 400);
     }
 
-    const url = await enviarImagem(req.file.buffer);
-    res.status(201).json({ url });
+    const resultado = await enviarArquivo(req.file.buffer);
+    res.status(201).json(resultado);
   } catch (erro) {
     next(erro);
   }

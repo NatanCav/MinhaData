@@ -50,6 +50,8 @@ export async function excluirEspaco(slug) {
   }
 }
 
+// Retorna { url, tipo } — tipo é "imagem" ou "video", detectado pelo
+// Cloudinary a partir do conteúdo real do arquivo.
 export async function uploadImagem(arquivo) {
   const formData = new FormData();
   formData.append("imagem", arquivo);
@@ -63,10 +65,10 @@ export async function uploadImagem(arquivo) {
   const corpo = await res.json().catch(() => null);
 
   if (!res.ok) {
-    throw new Error(corpo?.mensagem || "Não foi possível enviar a imagem.");
+    throw new Error(corpo?.mensagem || "Não foi possível enviar o arquivo.");
   }
 
-  return corpo.url;
+  return corpo;
 }
 
 export async function atualizarEspaco(slug, dados) {

@@ -28,6 +28,13 @@ function FadeIn({ children, className = "" }) {
   );
 }
 
+// Aceita tanto o formato antigo da galeria (string = URL de imagem) quanto
+// o novo ({url, tipo}), pra espaços cadastrados antes do suporte a vídeo.
+function normalizarItemGaleria(item) {
+  if (typeof item === "string") return { url: item, tipo: "imagem" };
+  return { url: item.url, tipo: item.tipo === "video" ? "video" : "imagem" };
+}
+
 function EsqueletoDetalhe() {
   return (
     <div className="flex flex-col gap-8 lg:flex-row">
@@ -113,48 +120,74 @@ export default function DetalheEspaco() {
         {!carregando && !erro && espaco && (
           <FadeIn key={espaco.id} className="flex flex-col gap-8 lg:flex-row">
             <article className="flex flex-1 flex-col gap-6">
-              <div className="flex flex-col gap-2">
-                <img
-                  src={espaco.galeria[imagemAtiva]}
-                  alt={espaco.nome}
-                  className="h-64 w-full rounded-2xl object-cover shadow-md md:h-96"
-                />
+              {(() => {
+                const galeria = espaco.galeria.map(normalizarItemGaleria);
+                const itemAtivo = galeria[imagemAtiva];
 
-                {espaco.galeria.length > 1 && (
-                  <div className="grid grid-cols-4 gap-2">
-                    {espaco.galeria.slice(0, 4).map((foto, indice) => {
-                      const restantes = espaco.galeria.length - 4;
-                      const ehUltimaComMais = indice === 3 && restantes > 0;
+                return (
+                  <div className="flex flex-col gap-2">
+                    {itemAtivo?.tipo === "video" ? (
+                      <video
+                        src={itemAtivo.url}
+                        controls
+                        className="h-64 w-full rounded-2xl object-cover shadow-md md:h-96"
+                      />
+                    ) : (
+                      <img
+                        src={itemAtivo?.url}
+                        alt={espaco.nome}
+                        className="h-64 w-full rounded-2xl object-cover shadow-md md:h-96"
+                      />
+                    )}
 
-                      return (
-                        <button
-                          key={foto}
-                          type="button"
-                          onClick={() => setImagemAtiva(indice)}
-                          aria-label={`Ver foto ${indice + 1} de ${espaco.nome}`}
-                          aria-pressed={imagemAtiva === indice}
-                          className={`relative h-16 overflow-hidden rounded-lg border-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 md:h-20 ${
-                            imagemAtiva === indice
-                              ? "border-emerald-600"
-                              : "border-transparent"
-                          }`}
-                        >
-                          <img
-                            src={foto}
-                            alt={`${espaco.nome} - foto ${indice + 1}`}
-                            className="h-full w-full object-cover"
-                          />
-                          {ehUltimaComMais && (
-                            <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-sm font-semibold text-white">
-                              +{restantes} fotos
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
+                    {galeria.length > 1 && (
+                      <div className="grid grid-cols-4 gap-2">
+                        {galeria.slice(0, 4).map((item, indice) => {
+                          const restantes = galeria.length - 4;
+                          const ehUltimaComMais = indice === 3 && restantes > 0;
+
+                          return (
+                            <button
+                              key={item.url}
+                              type="button"
+                              onClick={() => setImagemAtiva(indice)}
+                              aria-label={`Ver ${item.tipo === "video" ? "vídeo" : "foto"} ${
+                                indice + 1
+                              } de ${espaco.nome}`}
+                              aria-pressed={imagemAtiva === indice}
+                              className={`relative h-16 overflow-hidden rounded-lg border-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 md:h-20 ${
+                                imagemAtiva === indice
+                                  ? "border-emerald-600"
+                                  : "border-transparent"
+                              }`}
+                            >
+                              {item.tipo === "video" ? (
+                                <video src={item.url} className="h-full w-full object-cover" />
+                              ) : (
+                                <img
+                                  src={item.url}
+                                  alt={`${espaco.nome} - foto ${indice + 1}`}
+                                  className="h-full w-full object-cover"
+                                />
+                              )}
+                              {item.tipo === "video" && !ehUltimaComMais && (
+                                <span className="absolute inset-0 flex items-center justify-center bg-black/30 text-lg text-white">
+                                  ▶
+                                </span>
+                              )}
+                              {ehUltimaComMais && (
+                                <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-sm font-semibold text-white">
+                                  +{restantes}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                );
+              })()}
 
               <div className="flex flex-col gap-2">
                 <span className="text-xs font-medium uppercase tracking-wide text-gray-400">

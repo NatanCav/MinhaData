@@ -111,6 +111,24 @@ export function normalizarInformacoes(informacoes) {
   return informacoes.filter((item) => typeof item === "string" && item.trim()).map((item) => item.trim());
 }
 
+// Aceita tanto o formato antigo (string = URL de imagem) quanto o novo
+// ({url, tipo}), para não quebrar espaços que já tinham galeria cadastrada
+// antes do suporte a vídeo.
+export function normalizarGaleria(galeria) {
+  if (!Array.isArray(galeria)) return [];
+  return galeria
+    .map((item) => {
+      if (typeof item === "string") {
+        return item.trim() ? { url: item.trim(), tipo: "imagem" } : null;
+      }
+      if (item && typeof item.url === "string" && item.url.trim()) {
+        return { url: item.url.trim(), tipo: item.tipo === "video" ? "video" : "imagem" };
+      }
+      return null;
+    })
+    .filter(Boolean);
+}
+
 export async function criarEspaco(dados) {
   validarDadosEspaco(dados);
   const slug = await gerarSlugUnico(dados.nome);
@@ -126,7 +144,7 @@ export async function criarEspaco(dados) {
       unidadePreco: dados.unidadePreco,
       capacidade: Number(dados.capacidade),
       imagemCapa: dados.imagemCapa || null,
-      galeria: Array.isArray(dados.galeria) ? dados.galeria : [],
+      galeria: normalizarGaleria(dados.galeria),
       comodidades: normalizarComodidades(dados.comodidades),
       informacoes: normalizarInformacoes(dados.informacoes),
       disponivel: dados.disponivel ?? true,
@@ -151,7 +169,7 @@ export async function atualizarEspaco(slug, dados) {
       unidadePreco: dados.unidadePreco,
       capacidade: Number(dados.capacidade),
       imagemCapa: dados.imagemCapa || null,
-      galeria: Array.isArray(dados.galeria) ? dados.galeria : [],
+      galeria: normalizarGaleria(dados.galeria),
       comodidades: normalizarComodidades(dados.comodidades),
       informacoes: normalizarInformacoes(dados.informacoes),
       disponivel: dados.disponivel ?? true,
