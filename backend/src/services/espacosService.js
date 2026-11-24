@@ -111,7 +111,13 @@ export function normalizarInformacoes(informacoes) {
   return informacoes.filter((item) => typeof item === "string" && item.trim()).map((item) => item.trim());
 }
 
-export async function criarEspaco(dados) {
+function exigirMesmaOrganizacao(espaco, organizacaoId) {
+  if (espaco.organizationId !== organizacaoId) {
+    throw new AppError("Você não tem permissão para gerenciar este espaço.", 403);
+  }
+}
+
+export async function criarEspaco(dados, organizacaoId) {
   validarDadosEspaco(dados);
   const slug = await gerarSlugUnico(dados.nome);
 
@@ -130,15 +136,17 @@ export async function criarEspaco(dados) {
       comodidades: normalizarComodidades(dados.comodidades),
       informacoes: normalizarInformacoes(dados.informacoes),
       disponivel: dados.disponivel ?? true,
+      organizationId: organizacaoId,
     },
   });
 
   return paraApi(espaco);
 }
 
-export async function atualizarEspaco(slug, dados) {
+export async function atualizarEspaco(slug, dados, organizacaoId) {
   validarDadosEspaco(dados);
-  await buscarEspacoEntidadePorSlug(slug);
+  const espacoExistente = await buscarEspacoEntidadePorSlug(slug);
+  exigirMesmaOrganizacao(espacoExistente, organizacaoId);
 
   const espaco = await prisma.espaco.update({
     where: { slug },
@@ -161,8 +169,9 @@ export async function atualizarEspaco(slug, dados) {
   return paraApi(espaco);
 }
 
-export async function excluirEspaco(slug) {
+export async function excluirEspaco(slug, organizacaoId) {
   const espaco = await buscarEspacoEntidadePorSlug(slug);
+  exigirMesmaOrganizacao(espaco, organizacaoId);
 
   const totalReservas = await prisma.reserva.count({ where: { espacoId: espaco.id } });
   if (totalReservas > 0) {

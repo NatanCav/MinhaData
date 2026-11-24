@@ -2,6 +2,7 @@ import { prisma } from "../lib/prisma.js";
 import { AppError } from "../middlewares/AppError.js";
 import { cpfValido, normalizarCpf } from "../lib/cpf.js";
 import { buscarEspacoEntidadePorSlug } from "./espacosService.js";
+import { buscarOrganizacaoDoProprietario } from "./organizacoesService.js";
 import { enviarEmail } from "./emailService.js";
 import { enviarWhatsapp } from "./whatsappService.js";
 
@@ -139,8 +140,15 @@ async function criarReservasParaDatas({
   observacoes,
   userId,
   status,
+  organizacaoId,
 }) {
   const espaco = await buscarEspacoEntidadePorSlug(espacoSlug);
+
+  // organizacaoId só é informado no cadastro manual (feito pelo proprietário) —
+  // a reserva pública não é restrita a espaços da própria organização.
+  if (organizacaoId && espaco.organizationId !== organizacaoId) {
+    throw new AppError("Este espaço não pertence à sua organização.", 403);
+  }
 
   if (!espaco.disponivel) {
     throw new AppError("Este espaço não está disponível para reservas.", 409);
@@ -252,7 +260,8 @@ export async function criarReserva(userId, payload) {
 // "confirmada" — já é um acordo fechado, não uma solicitação pendente — e
 // não dispara nenhuma notificação ao cliente.
 export async function criarReservaManual(usuarioId, payload) {
-  if (!(await ehProprietario(usuarioId))) {
+  const organizacao = await buscarOrganizacaoDoProprietario(usuarioId);
+  if (!(await ehProprietario(usuarioId)) || !organizacao) {
     throw new AppError("Apenas o proprietário pode cadastrar reservas manualmente.", 403);
   }
 
@@ -270,6 +279,7 @@ export async function criarReservaManual(usuarioId, payload) {
     observacoes: payload.observacoes,
     userId: null,
     status: "confirmada",
+    organizacaoId: organizacao.id,
   });
 }
 
@@ -279,6 +289,14 @@ async function ehProprietario(usuarioId) {
     select: { role: true },
   });
   return usuario?.role === "PROPRIETARIO";
+}
+
+// Verifica não só que o usuário é proprietário, mas que a reserva pertence à
+// organização dele — um proprietário de outra organização não deve ver nem
+// alterar nada aqui.
+async function ehProprietarioDaReserva(usuarioId, reserva) {
+  const organizacao = await buscarOrganizacaoDoProprietario(usuarioId);
+  return Boolean(organizacao) && reserva.espaco.organizationId === organizacao.id;
 }
 
 export async function buscarReservaPorId(id, usuarioId) {
@@ -296,15 +314,22 @@ export async function buscarReservaPorId(id, usuarioId) {
     throw new AppError("Reserva não encontrada.", 404);
   }
 
-  if (reserva.userId !== usuarioId && !(await ehProprietario(usuarioId))) {
+  const proprietarioDaOrganizacao = await ehProprietarioDaReserva(usuarioId, reserva);
+  if (reserva.userId !== usuarioId && !proprietarioDaOrganizacao) {
     throw new AppError("Você não tem permissão para ver esta reserva.", 403);
   }
 
   return paraApi(reserva);
 }
 
-export async function listarTodasReservas() {
+export async function listarTodasReservas(usuarioId) {
+  const organizacao = await buscarOrganizacaoDoProprietario(usuarioId);
+  if (!organizacao) {
+    throw new AppError("Nenhuma organização associada a este usuário.", 403);
+  }
+
   const reservas = await prisma.reserva.findMany({
+    where: { espaco: { organizationId: organizacao.id } },
     include: { espaco: true },
     orderBy: { createdAt: "desc" },
   });
@@ -373,12 +398,15 @@ export async function atualizarStatusReserva(usuarioId, id, novoStatus) {
     throw new AppError("Identificador de reserva inválido.");
   }
 
-  const reserva = await prisma.reserva.findUnique({ where: { id: idNumerico } });
+  const reserva = await prisma.reserva.findUnique({
+    where: { id: idNumerico },
+    include: { espaco: true },
+  });
   if (!reserva) {
     throw new AppError("Reserva não encontrada.", 404);
   }
 
-  const proprietario = await ehProprietario(usuarioId);
+  const proprietario = await ehProprietarioDaReserva(usuarioId, reserva);
   const donoDaReserva = reserva.userId === usuarioId;
 
   const avaliacao = avaliarTransicaoStatus({
@@ -441,18 +469,21 @@ export async function atualizarStatusReserva(usuarioId, id, novoStatus) {
 }
 
 export async function atualizarObservacoesProprietario(usuarioId, id, observacoes) {
-  if (!(await ehProprietario(usuarioId))) {
-    throw new AppError("Você não tem permissão para alterar esta reserva.", 403);
-  }
-
   const idNumerico = Number(id);
   if (!Number.isInteger(idNumerico)) {
     throw new AppError("Identificador de reserva inválido.");
   }
 
-  const reserva = await prisma.reserva.findUnique({ where: { id: idNumerico } });
+  const reserva = await prisma.reserva.findUnique({
+    where: { id: idNumerico },
+    include: { espaco: true },
+  });
   if (!reserva) {
     throw new AppError("Reserva não encontrada.", 404);
+  }
+
+  if (!(await ehProprietarioDaReserva(usuarioId, reserva))) {
+    throw new AppError("Você não tem permissão para alterar esta reserva.", 403);
   }
 
   const reservaAtualizada = await prisma.reserva.update({

@@ -27,9 +27,9 @@ export async function obterPorId(req, res, next) {
   }
 }
 
-export async function listarTodas(_req, res, next) {
+export async function listarTodas(req, res, next) {
   try {
-    const reservas = await reservasService.listarTodasReservas();
+    const reservas = await reservasService.listarTodasReservas(req.usuarioId);
     res.json(reservas);
   } catch (erro) {
     next(erro);

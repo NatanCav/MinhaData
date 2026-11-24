@@ -159,6 +159,7 @@ Status: `[x]` concluída · `[ ]` pendente
 ---
 
 ### Etapa 2 — Isolamento de dados e autorização
+**Status:** [x] Concluída em 2026-11-24
 - **Objetivo:** garantir que um proprietário só veja/altere dados da própria organização.
 - **Problema que resolve:** o ponto mais crítico da auditoria — hoje `PROPRIETARIO` enxerga e administra o sistema inteiro.
 - **Funcionalidades envolvidas:** listagem e gestão de espaços, listagem e gestão de reservas, calendário, cadastro manual, observações do proprietário.

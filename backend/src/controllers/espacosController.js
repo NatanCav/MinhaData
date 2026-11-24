@@ -20,7 +20,7 @@ export async function obterPorSlug(req, res, next) {
 
 export async function criar(req, res, next) {
   try {
-    const espaco = await espacosService.criarEspaco(req.body ?? {});
+    const espaco = await espacosService.criarEspaco(req.body ?? {}, req.organizacaoId);
     res.status(201).json(espaco);
   } catch (erro) {
     next(erro);
@@ -29,7 +29,11 @@ export async function criar(req, res, next) {
 
 export async function atualizar(req, res, next) {
   try {
-    const espaco = await espacosService.atualizarEspaco(req.params.slug, req.body ?? {});
+    const espaco = await espacosService.atualizarEspaco(
+      req.params.slug,
+      req.body ?? {},
+      req.organizacaoId
+    );
     res.json(espaco);
   } catch (erro) {
     next(erro);
@@ -38,7 +42,7 @@ export async function atualizar(req, res, next) {
 
 export async function excluir(req, res, next) {
   try {
-    await espacosService.excluirEspaco(req.params.slug);
+    await espacosService.excluirEspaco(req.params.slug, req.organizacaoId);
     res.status(204).end();
   } catch (erro) {
     next(erro);
